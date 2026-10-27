@@ -178,8 +178,8 @@ export default function VendorDashboardPage() {
       if (!user) { setLoading(false); return; }
 
       // Load vendor profile
-      const { data: vendor } = await supabase
-        .from("grooming_vendors")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: vendor } = await (supabase.from("grooming_vendors") as any)
         .select("*")
         .eq("user_id", user.id)
         .single();
@@ -202,8 +202,10 @@ export default function VendorDashboardPage() {
 
         // Load bookings and services
         const [{ data: bookingData }, { data: serviceData }] = await Promise.all([
-          supabase.from("bookings").select("*, users(full_name, email), services(name)").eq("vendor_id", vendor.id).order("appointment_date", { ascending: false }),
-          supabase.from("services").select("*").eq("vendor_id", vendor.id).eq("is_active", true),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase.from("bookings") as any).select("*, users(full_name, email), services(name)").eq("vendor_id", vendor.id).order("appointment_date", { ascending: false }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase.from("services") as any).select("*").eq("vendor_id", vendor.id).eq("is_active", true),
         ]);
         setBookings((bookingData as Booking[]) ?? []);
         setServices(serviceData ?? []);
