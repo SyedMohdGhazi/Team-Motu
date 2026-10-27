@@ -85,7 +85,8 @@ export default function AddPetPage() {
       image_url = publicUrl;
     }
 
-    const { error } = await supabase.from("shelter_animals").insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("shelter_animals") as any).insert({
       shelter_id: null,
       posted_by_user_id: user.id,
       name: form.name,

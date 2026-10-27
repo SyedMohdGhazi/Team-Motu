@@ -43,7 +43,8 @@ export default function MedicalStoreRegisterPage() {
       return;
     }
 
-    const { error } = await supabase.from("medical_stores").insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("medical_stores") as any).insert({
       user_id: user.id,
       store_name: form.store_name,
       description: form.description || null,
