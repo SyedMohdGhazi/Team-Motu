@@ -1,20 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Phone, MapPin, Globe, Mail, AlertTriangle, Heart, Users, ExternalLink, Loader2 } from "lucide-react";
+import {
+  Phone, MapPin, Globe, Mail, AlertTriangle,
+  Heart, Users, ExternalLink, Loader2, Plus,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-
-const NGO_HELPLINES = [
-  { name: "Dehradun Animal Rescue", number: "1800-XXX-0001", available: "24/7" },
-  { name: "Prani Welfare Society", number: "1800-XXX-0002", available: "8am – 10pm" },
-  { name: "SPCA Uttarakhand", number: "+91-135-271-XXXX", available: "9am – 6pm" },
-  { name: "National Animal Helpline", number: "1962", available: "24/7" },
-];
 
 interface Shelter {
   id: string;
@@ -41,7 +38,6 @@ interface Animal {
   description: string | null;
   is_vaccinated: boolean;
   is_neutered: boolean;
-  adoption_status: string;
   shelters?: { name: string };
 }
 
@@ -51,10 +47,11 @@ function OccupancyBar({ current, capacity }: { current: number; capacity: number
   return (
     <div>
       <div className="flex justify-between text-xs text-muted-foreground mb-1">
-        <span>Occupancy</span><span>{current}/{capacity} ({pct}%)</span>
+        <span>Occupancy</span>
+        <span>{current}/{capacity} ({pct}%)</span>
       </div>
       <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -81,52 +78,82 @@ export default function SheltersPage() {
     fetchData();
   }, []);
 
-  const filteredAnimals = animals.filter((a) => petFilter === "all" || a.species === petFilter);
+  const helplines = shelters.filter((s) => s.emergency_helpline);
+  const filteredAnimals = animals.filter(
+    (a) => petFilter === "all" || a.species === petFilter
+  );
 
   return (
     <>
       <Navbar />
       <main className="container mx-auto max-w-3xl px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">Animal Shelters & Adoption</h1>
-          <p className="text-sm text-muted-foreground mt-1">Local shelters, NGOs, and pets available near Clement Town / ISBT, Dehradun</p>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Animal Shelters & Adoption</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Shelters, foster homes, and NGOs near Clement Town / ISBT, Dehradun
+            </p>
+          </div>
+          <Button size="sm" asChild>
+            <Link href="/shelter/register">
+              <Plus className="h-4 w-4 mr-1" /> Add shelter
+            </Link>
+          </Button>
         </div>
 
-        {/* Emergency helplines — always shown */}
-        <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:bg-amber-950/30 dark:border-amber-800">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-            <h2 className="font-bold text-amber-800 dark:text-amber-200">Emergency NGO Helplines</h2>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {NGO_HELPLINES.map((h) => (
-              <div key={h.name} className="flex items-center justify-between rounded-lg bg-white dark:bg-background border px-3 py-2">
-                <div>
-                  <p className="text-sm font-medium">{h.name}</p>
-                  <p className="text-xs text-muted-foreground">{h.available}</p>
+        {/* Emergency helplines — only shown if shelters have listed one */}
+        {helplines.length > 0 && (
+          <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:bg-amber-950/30 dark:border-amber-800">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+              <h2 className="font-bold text-amber-800 dark:text-amber-200">
+                Emergency Helplines
+              </h2>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {helplines.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between rounded-lg bg-white dark:bg-background border px-3 py-2"
+                >
+                  <p className="text-sm font-medium">{s.name}</p>
+                  <a
+                    href={`tel:${s.emergency_helpline}`}
+                    className="flex items-center gap-1 text-sm font-bold text-primary hover:underline"
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                    {s.emergency_helpline}
+                  </a>
                 </div>
-                <a href={`tel:${h.number}`} className="flex items-center gap-1 text-sm font-bold text-primary hover:underline">
-                  <Phone className="h-3.5 w-3.5" />{h.number}
-                </a>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <Tabs defaultValue="shelters">
           <TabsList className="w-full mb-5">
             <TabsTrigger value="shelters" className="flex-1">Shelter Directory</TabsTrigger>
-            <TabsTrigger value="adopt" className="flex-1 gap-2"><Heart className="h-4 w-4" /> Pets for Adoption</TabsTrigger>
+            <TabsTrigger value="adopt" className="flex-1 gap-2">
+              <Heart className="h-4 w-4" /> Pets for Adoption
+            </TabsTrigger>
           </TabsList>
 
+          {/* Shelter directory */}
           <TabsContent value="shelters">
             {loading ? (
-              <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
             ) : shelters.length === 0 ? (
               <div className="py-16 text-center text-muted-foreground">
                 <p className="text-4xl mb-3">🏠</p>
-                <p className="font-medium">No shelters listed yet</p>
-                <p className="text-sm mt-1">Add shelters via the Supabase dashboard to display them here.</p>
+                <p className="font-medium">No shelters registered yet</p>
+                <p className="text-sm mt-2">
+                  Run a shelter or foster home?{" "}
+                  <Link href="/shelter/register" className="text-primary underline">
+                    Add yours here
+                  </Link>
+                </p>
               </div>
             ) : (
               <div className="grid gap-4">
@@ -137,7 +164,9 @@ export default function SheltersPage() {
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-bold text-base">{s.name}</h3>
-                            {s.is_ngo && <Badge variant="secondary" className="text-xs">NGO</Badge>}
+                            {s.is_ngo && (
+                              <Badge variant="secondary" className="text-xs">NGO</Badge>
+                            )}
                           </div>
                           {s.address && (
                             <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
@@ -154,15 +183,35 @@ export default function SheltersPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="pt-0 grid gap-3">
-                      {s.description && <p className="text-sm text-muted-foreground">{s.description}</p>}
-                      {s.capacity && s.current_occupancy !== null && (
+                      {s.description && (
+                        <p className="text-sm text-muted-foreground">{s.description}</p>
+                      )}
+                      {s.capacity != null && s.current_occupancy != null && (
                         <OccupancyBar current={s.current_occupancy} capacity={s.capacity} />
                       )}
                       <div className="flex flex-wrap gap-3 text-sm text-muted-foreground pt-1 border-t">
-                        {s.phone && <a href={`tel:${s.phone}`} className="flex items-center gap-1 hover:text-primary transition-colors"><Phone className="h-3.5 w-3.5" />{s.phone}</a>}
-                        {s.email && <a href={`mailto:${s.email}`} className="flex items-center gap-1 hover:text-primary transition-colors"><Mail className="h-3.5 w-3.5" />{s.email}</a>}
-                        {s.website_url && <a href={s.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary transition-colors"><Globe className="h-3.5 w-3.5" />Website<ExternalLink className="h-3 w-3" /></a>}
-                        {s.emergency_helpline && <span className="flex items-center gap-1 text-amber-600 font-medium"><AlertTriangle className="h-3.5 w-3.5" />Helpline: {s.emergency_helpline}</span>}
+                        {s.phone && (
+                          <a href={`tel:${s.phone}`} className="flex items-center gap-1 hover:text-primary transition-colors">
+                            <Phone className="h-3.5 w-3.5" />{s.phone}
+                          </a>
+                        )}
+                        {s.email && (
+                          <a href={`mailto:${s.email}`} className="flex items-center gap-1 hover:text-primary transition-colors">
+                            <Mail className="h-3.5 w-3.5" />{s.email}
+                          </a>
+                        )}
+                        {s.website_url && (
+                          <a href={s.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary transition-colors">
+                            <Globe className="h-3.5 w-3.5" />Website
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                        {s.emergency_helpline && (
+                          <span className="flex items-center gap-1 text-amber-600 font-medium">
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            Helpline: {s.emergency_helpline}
+                          </span>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -171,20 +220,33 @@ export default function SheltersPage() {
             )}
           </TabsContent>
 
+          {/* Adoption listings */}
           <TabsContent value="adopt">
             <div className="flex rounded-lg border overflow-hidden text-sm mb-5 w-fit">
               {(["all", "dog", "cat"] as const).map((p) => (
-                <button key={p} onClick={() => setPetFilter(p)} className={`px-4 py-1.5 font-medium transition-colors capitalize ${petFilter === p ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}>
+                <button
+                  key={p}
+                  onClick={() => setPetFilter(p)}
+                  className={`px-4 py-1.5 font-medium transition-colors ${
+                    petFilter === p ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+                  }`}
+                >
                   {p === "all" ? "All pets" : p === "dog" ? "🐶 Dogs" : "🐱 Cats"}
                 </button>
               ))}
             </div>
+
             {loading ? (
-              <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
             ) : filteredAnimals.length === 0 ? (
               <div className="py-16 text-center text-muted-foreground">
                 <p className="text-4xl mb-3">🐾</p>
                 <p className="font-medium">No animals listed for adoption yet</p>
+                <p className="text-sm mt-2">
+                  Shelters can add adoptable animals from their dashboard.
+                </p>
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
@@ -198,15 +260,22 @@ export default function SheltersPage() {
                         <div>
                           <h3 className="font-bold">{a.name}</h3>
                           <p className="text-xs text-muted-foreground">
-                            {[a.breed, a.age_years ? `${a.age_years} yr` : null, a.gender].filter(Boolean).join(" · ")}
+                            {[a.breed, a.age_years ? `${a.age_years} yr` : null, a.gender]
+                              .filter(Boolean).join(" · ")}
                           </p>
                         </div>
                         <div className="flex gap-1 flex-wrap justify-end">
-                          {a.is_vaccinated && <Badge variant="secondary" className="text-xs">Vaccinated</Badge>}
-                          {a.is_neutered && <Badge variant="outline" className="text-xs">Neutered</Badge>}
+                          {a.is_vaccinated && (
+                            <Badge variant="secondary" className="text-xs">Vaccinated</Badge>
+                          )}
+                          {a.is_neutered && (
+                            <Badge variant="outline" className="text-xs">Neutered</Badge>
+                          )}
                         </div>
                       </div>
-                      {a.description && <p className="text-xs text-muted-foreground">{a.description}</p>}
+                      {a.description && (
+                        <p className="text-xs text-muted-foreground">{a.description}</p>
+                      )}
                       <div className="flex items-center justify-between pt-2 border-t">
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Users className="h-3 w-3" />{a.shelters?.name}
