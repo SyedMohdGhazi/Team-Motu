@@ -179,6 +179,53 @@ export type Database = {
         };
         Update: Partial<Database["public"]["Tables"]["medical_products"]["Row"]>;
       };
+      shelter_animals: {
+        Row: {
+          id: string;
+          shelter_id: string | null;
+          posted_by_user_id: string | null;
+          name: string;
+          species: string;
+          breed: string | null;
+          age_years: number | null;
+          gender: string | null;
+          description: string | null;
+          image_url: string | null;
+          is_vaccinated: boolean;
+          is_neutered: boolean;
+          adoption_status: "available" | "pending" | "adopted";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["shelter_animals"]["Row"]> & {
+          name: string;
+          species: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["shelter_animals"]["Row"]>;
+      };
+      medical_stores: {
+        Row: {
+          id: string;
+          user_id: string;
+          store_name: string;
+          description: string | null;
+          address: string | null;
+          city: string | null;
+          state: string | null;
+          country: string;
+          phone: string | null;
+          email: string | null;
+          website_url: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["medical_stores"]["Row"]> & {
+          user_id: string;
+          store_name: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["medical_stores"]["Row"]>;
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
