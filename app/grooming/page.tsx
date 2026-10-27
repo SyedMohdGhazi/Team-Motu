@@ -72,7 +72,8 @@ function BookingModal({ vendor, serviceType, open, onClose }: {
       setLoading(false);
       return;
     }
-    const { error } = await supabase.from("bookings").insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("bookings") as any).insert({
       user_id: user.id,
       vendor_id: vendor.id,
       service_id: service.id ?? "",
