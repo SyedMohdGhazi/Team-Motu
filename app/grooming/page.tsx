@@ -37,7 +37,7 @@ interface Vendor {
   total_reviews: number;
   offers_home_service: boolean;
   offers_clinic_visit: boolean;
-  services?: { price: number; pet_type: string; service_type: string }[];
+  services?: { id: string; price: number; pet_type: string; service_type: string }[];
 }
 
 function BookingModal({ vendor, serviceType, open, onClose }: {
