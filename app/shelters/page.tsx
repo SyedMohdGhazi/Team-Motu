@@ -29,7 +29,7 @@ interface Shelter {
 
 interface Animal {
   id: string;
-  shelter_id: string;
+  shelter_id: string | null;
   name: string;
   species: string;
   breed: string | null;
@@ -38,7 +38,8 @@ interface Animal {
   description: string | null;
   is_vaccinated: boolean;
   is_neutered: boolean;
-  shelters?: { name: string };
+  image_url: string | null;
+  shelters?: { name: string } | null;
 }
 
 function OccupancyBar({ current, capacity }: { current: number; capacity: number }) {
@@ -87,18 +88,11 @@ export default function SheltersPage() {
     <>
       <Navbar />
       <main className="container mx-auto max-w-3xl px-4 py-6">
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Animal Shelters & Adoption</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Shelters, foster homes, and NGOs near Clement Town / ISBT, Dehradun
-            </p>
-          </div>
-          <Button size="sm" asChild>
-            <Link href="/shelter/register">
-              <Plus className="h-4 w-4 mr-1" /> Add shelter
-            </Link>
-          </Button>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">Animal Shelters & Adoption</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Shelters, foster homes, and NGOs near Clement Town / ISBT, Dehradun
+          </p>
         </div>
 
         {/* Emergency helplines — only shown if shelters have listed one */}
@@ -140,6 +134,13 @@ export default function SheltersPage() {
 
           {/* Shelter directory */}
           <TabsContent value="shelters">
+            <div className="flex justify-end mb-4">
+              <Button size="sm" asChild>
+                <Link href="/shelter/register">
+                  <Plus className="h-4 w-4 mr-1" /> Add shelter
+                </Link>
+              </Button>
+            </div>
             {loading ? (
               <div className="flex justify-center py-16">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -222,18 +223,25 @@ export default function SheltersPage() {
 
           {/* Adoption listings */}
           <TabsContent value="adopt">
-            <div className="flex rounded-lg border overflow-hidden text-sm mb-5 w-fit">
-              {(["all", "dog", "cat"] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPetFilter(p)}
-                  className={`px-4 py-1.5 font-medium transition-colors ${
-                    petFilter === p ? "bg-primary text-primary-foreground" : "hover:bg-accent"
-                  }`}
-                >
-                  {p === "all" ? "All pets" : p === "dog" ? "🐶 Dogs" : "🐱 Cats"}
-                </button>
-              ))}
+            <div className="flex items-center justify-between gap-4 mb-5">
+              <div className="flex rounded-lg border overflow-hidden text-sm w-fit">
+                {(["all", "dog", "cat"] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPetFilter(p)}
+                    className={`px-4 py-1.5 font-medium transition-colors ${
+                      petFilter === p ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+                    }`}
+                  >
+                    {p === "all" ? "All pets" : p === "dog" ? "🐶 Dogs" : "🐱 Cats"}
+                  </button>
+                ))}
+              </div>
+              <Button size="sm" asChild>
+                <Link href="/pet/add">
+                  <Plus className="h-4 w-4 mr-1" /> Add pet for adoption
+                </Link>
+              </Button>
             </div>
 
             {loading ? (
@@ -245,16 +253,23 @@ export default function SheltersPage() {
                 <p className="text-4xl mb-3">🐾</p>
                 <p className="font-medium">No animals listed for adoption yet</p>
                 <p className="text-sm mt-2">
-                  Shelters can add adoptable animals from their dashboard.
+                  Have a pet in need of a home?{" "}
+                  <Link href="/pet/add" className="text-primary underline">
+                    List them here
+                  </Link>
                 </p>
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 {filteredAnimals.map((a) => (
                   <Card key={a.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="h-28 bg-gradient-to-br from-rose-100 to-pink-50 dark:from-rose-950 dark:to-pink-950 flex items-center justify-center text-5xl">
-                      {a.species === "dog" ? "🐶" : a.species === "cat" ? "🐱" : "🐾"}
-                    </div>
+                    {a.image_url ? (
+                      <img src={a.image_url} alt={a.name} className="h-36 w-full object-cover" />
+                    ) : (
+                      <div className="h-28 bg-gradient-to-br from-rose-100 to-pink-50 dark:from-rose-950 dark:to-pink-950 flex items-center justify-center text-5xl">
+                        {a.species === "dog" ? "🐶" : a.species === "cat" ? "🐱" : "🐾"}
+                      </div>
+                    )}
                     <CardContent className="p-4 grid gap-2">
                       <div className="flex items-start justify-between">
                         <div>
@@ -278,7 +293,7 @@ export default function SheltersPage() {
                       )}
                       <div className="flex items-center justify-between pt-2 border-t">
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Users className="h-3 w-3" />{a.shelters?.name}
+                          <Users className="h-3 w-3" />{a.shelters?.name ?? "Independent"}
                         </span>
                         <Button size="sm" variant="outline" className="text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700">
                           <Heart className="h-3.5 w-3.5 mr-1" /> Adopt

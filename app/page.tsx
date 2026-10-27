@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 async function getLiveCounts() {
   try {
     const supabase = await createClient();
-    const [{ count: vendors }, { count: shelters }, { count: products }] =
+    const [{ count: vendors }, { count: shelters }, { count: stores }] =
       await Promise.all([
         supabase
           .from("grooming_vendors")
@@ -17,13 +17,13 @@ async function getLiveCounts() {
           .select("*", { count: "exact", head: true })
           .eq("is_active", true),
         supabase
-          .from("medical_products")
+          .from("medical_stores")
           .select("*", { count: "exact", head: true })
           .eq("is_active", true),
       ]);
-    return { vendors: vendors ?? 0, shelters: shelters ?? 0, products: products ?? 0 };
+    return { vendors: vendors ?? 0, shelters: shelters ?? 0, stores: stores ?? 0 };
   } catch {
-    return { vendors: 0, shelters: 0, products: 0 };
+    return { vendors: 0, shelters: 0, stores: 0 };
   }
 }
 
@@ -68,10 +68,10 @@ export default async function HomePage() {
       description:
         "Shop vet-recommended medicines, flea & tick treatments, nutritional supplements, quality pet food, and grooming tools — all delivered to your door.",
       href: "/medical-store",
-      registerHref: null,
-      registerLabel: null,
-      count: counts.products,
-      countLabel: counts.products === 1 ? "product available" : "products available",
+      registerHref: "/medical-store/register",
+      registerLabel: "Register your store",
+      count: counts.stores,
+      countLabel: counts.stores === 1 ? "store listed" : "stores listed",
       color: "from-emerald-500/10 to-teal-500/10",
       iconBg: "bg-emerald-500",
       badges: ["Medicines", "Food", "Grooming Tools"],
@@ -144,7 +144,6 @@ export default async function HomePage() {
                         <Link
                           href={registerHref}
                           className="text-xs text-primary hover:underline font-medium"
-                          onClick={(e) => e.stopPropagation()}
                         >
                           {registerLabel} →
                         </Link>
