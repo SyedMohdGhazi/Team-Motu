@@ -46,7 +46,8 @@ export default function ShelterRegisterPage() {
       return;
     }
 
-    const { error } = await supabase.from("shelters").insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("shelters") as any).insert({
       name: form.name,
       description: form.description || null,
       address: form.address || null,

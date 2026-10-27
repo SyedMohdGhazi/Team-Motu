@@ -73,7 +73,8 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
   async function handleAdd() {
     if (!name || !price || !duration) return;
     setLoading(true);
-    const { error } = await supabase.from("services").insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("services") as any).insert({
       vendor_id: vendorId, name, price: parseFloat(price),
       duration_minutes: parseInt(duration), category,
       pet_type: petType as "dog" | "cat" | "both",
@@ -235,9 +236,12 @@ export default function VendorDashboardPage() {
       is_active: true,
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = vendorId
-      ? await supabase.from("grooming_vendors").update(payload).eq("id", vendorId).select().single()
-      : await supabase.from("grooming_vendors").insert(payload).select().single();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ? await (supabase.from("grooming_vendors") as any).update(payload).eq("id", vendorId).select().single()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      : await (supabase.from("grooming_vendors") as any).insert(payload).select().single();
 
     setSavingProfile(false);
     if (error) {
@@ -246,12 +250,14 @@ export default function VendorDashboardPage() {
       if (!vendorId) setVendorId(data.id);
       toast({ title: "Profile saved!", description: "Your business is now live on Team Motu." });
       // Also update user role to vendor
-      await supabase.from("users").update({ role: "vendor" }).eq("id", user.id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from("users") as any).update({ role: "vendor" }).eq("id", user.id);
     }
   }
 
   async function updateBookingStatus(id: string, status: BookingStatus) {
-    const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("bookings") as any).update({ status }).eq("id", id);
     if (error) {
       toast({ title: "Update failed", description: error.message, variant: "destructive" });
     } else {
