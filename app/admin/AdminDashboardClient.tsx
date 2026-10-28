@@ -310,7 +310,7 @@ export default function AdminDashboardClient({ adminEmail }: { adminEmail: strin
                     <div className="flex flex-col gap-2">
                       {rows.map((row) => {
                         const displayName =
-                          (row as Record<string, unknown>)[nameField] as string | null
+                          (row as unknown as Record<string, unknown>)[nameField] as string | null
                           ?? row.email ?? "—";
                         const ownerEmail = row.users?.email ?? row.email ?? "—";
                         const st = STATUS_CHIP[row.approval_status] ?? STATUS_CHIP.pending;
