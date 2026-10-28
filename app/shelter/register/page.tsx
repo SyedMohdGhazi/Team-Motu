@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Camera, X as XIcon, ImagePlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
+
+const MAX_PHOTOS = 4;
 
 export default function ShelterRegisterPage() {
   const [form, setForm] = useState({
@@ -26,13 +28,48 @@ export default function ShelterRegisterPage() {
     capacity: "",
     is_ngo: false,
   });
+  const [photos, setPhotos] = useState<Array<{ file: File; preview: string }>>([]);
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const router = useRouter();
   const supabase = createClient();
 
   function update(field: string, value: string | boolean) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    const remaining = MAX_PHOTOS - photos.length;
+    const toAdd = files.slice(0, remaining).map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    setPhotos((p) => [...p, ...toAdd]);
+    if (e.target) e.target.value = "";
+  }
+
+  function removePhoto(idx: number) {
+    setPhotos((p) => {
+      URL.revokeObjectURL(p[idx].preview);
+      return p.filter((_, i) => i !== idx);
+    });
+  }
+
+  async function uploadPhotos(userId: string): Promise<string[]> {
+    const urls: string[] = [];
+    for (const { file } of photos) {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage
+        .from("shelter-photos")
+        .upload(path, file, { cacheControl: "3600", upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from("shelter-photos").getPublicUrl(path);
+      urls.push(data.publicUrl);
+    }
+    return urls;
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -46,8 +83,21 @@ export default function ShelterRegisterPage() {
       return;
     }
 
+    let photoUrls: string[] = [];
+    if (photos.length > 0) {
+      try {
+        photoUrls = await uploadPhotos(user.id);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        toast({ title: "Photo upload failed", description: msg, variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from("shelters") as any).insert({
+      user_id: user.id,
       name: form.name,
       description: form.description || null,
       address: form.address || null,
@@ -61,21 +111,19 @@ export default function ShelterRegisterPage() {
       capacity: form.capacity ? parseInt(form.capacity) : null,
       current_occupancy: 0,
       is_ngo: form.is_ngo,
-      is_active: true,
+      is_active: false,
+      approval_status: "pending",
+      photos: photoUrls,
     });
 
     setLoading(false);
 
     if (error) {
-      toast({
-        title: "Registration failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Registration failed", description: error.message, variant: "destructive" });
     } else {
       toast({
         title: "Shelter registered!",
-        description: "Your shelter is now live on Team Motu.",
+        description: "Your listing is under review. You'll go live once approved.",
       });
       router.push("/shelters");
     }
@@ -94,7 +142,7 @@ export default function ShelterRegisterPage() {
           </Link>
           <h1 className="text-2xl font-bold">Register your Shelter or Foster Home</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Your listing will appear on the Team Motu shelters directory once submitted.
+            Your listing will appear on Team Motu after admin review.
           </p>
         </div>
 
@@ -129,6 +177,55 @@ export default function ShelterRegisterPage() {
                 />
                 <span className="text-sm">We are a registered NGO</span>
               </label>
+            </CardContent>
+          </Card>
+
+          {/* Photos */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Camera className="h-4 w-4" /> Shelter Photos
+                <span className="text-xs font-normal text-muted-foreground ml-1">
+                  (up to {MAX_PHOTOS})
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              <p className="text-xs text-muted-foreground">
+                Show potential adopters and fosters what your space looks like. Good photos increase enquiries.
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                {photos.map(({ preview }, i) => (
+                  <div key={i} className="relative aspect-square rounded-lg overflow-hidden border bg-muted">
+                    <img src={preview} alt="" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(i)}
+                      className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black transition-colors"
+                    >
+                      <XIcon className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                {photos.length < MAX_PHOTOS && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/50 transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground/50 hover:text-muted-foreground"
+                  >
+                    <ImagePlus className="h-5 w-5" />
+                    <span className="text-[10px]">Add photo</span>
+                  </button>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handlePhotoSelect}
+              />
             </CardContent>
           </Card>
 
