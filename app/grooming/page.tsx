@@ -30,6 +30,7 @@ type BookingStep = 1 | 2 | 3;
 
 interface Vendor {
   id: string;
+  user_id: string;
   business_name: string;
   address: string | null;
   city: string | null;
@@ -200,7 +201,7 @@ function BookingModal({ vendor, serviceType, open, onClose }: {
   );
 }
 
-function VendorCard({ vendor, activeTab }: { vendor: Vendor; activeTab: "home" | "clinic" }) {
+function VendorCard({ vendor, activeTab, isOwnVendor }: { vendor: Vendor; activeTab: "home" | "clinic"; isOwnVendor: boolean }) {
   const [bookingOpen, setBookingOpen] = useState(false);
   const priceFrom = vendor.services?.length ? Math.min(...vendor.services.map((s) => s.price)) : null;
 
@@ -233,11 +234,15 @@ function VendorCard({ vendor, activeTab }: { vendor: Vendor; activeTab: "home" |
             <span className="text-sm">
               {priceFrom ? <>From <strong className="text-primary">₹{priceFrom}</strong></> : <span className="text-muted-foreground text-xs">No services listed yet</span>}
             </span>
-            <Button size="sm" onClick={() => setBookingOpen(true)} disabled={!vendor.services?.length}>Book now</Button>
+            {isOwnVendor ? (
+              <Button size="sm" variant="outline" disabled>Your business</Button>
+            ) : (
+              <Button size="sm" onClick={() => setBookingOpen(true)} disabled={!vendor.services?.length}>Book now</Button>
+            )}
           </div>
         </CardContent>
       </Card>
-      {bookingOpen && (
+      {bookingOpen && !isOwnVendor && (
         <BookingModal vendor={vendor} serviceType={activeTab} open={bookingOpen} onClose={() => setBookingOpen(false)} />
       )}
     </>
@@ -251,20 +256,25 @@ export default function GroomingPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
-    async function fetchVendors() {
+    async function fetchAll() {
       setLoading(true);
-      const { data } = await supabase
-        .from("grooming_vendors")
-        .select("*, services(id, price, pet_type, service_type)")
-        .eq("is_active", true)
-        .order("rating", { ascending: false });
+      const [{ data: { user } }, { data }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase
+          .from("grooming_vendors")
+          .select("*, services(id, price, pet_type, service_type)")
+          .eq("is_active", true)
+          .order("rating", { ascending: false }),
+      ]);
+      setCurrentUserId(user?.id ?? null);
       setVendors((data as Vendor[]) ?? []);
       setLoading(false);
     }
-    fetchVendors();
+    fetchAll();
   }, []);
 
   const filtered = vendors.filter((v) => {
@@ -279,8 +289,8 @@ export default function GroomingPage() {
       <Navbar />
       <main className="container mx-auto max-w-3xl px-4 py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold">Pet Grooming & Spa</h1>
-          <p className="text-sm text-muted-foreground mt-1">Verified groomers near ISBT / Clement Town, Dehradun</p>
+          <h1 className="text-2xl font-bold">Grooming Spas & Salons</h1>
+          <p className="text-sm text-muted-foreground mt-1">Verified groomers near Dehradun</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "home" | "clinic")} className="mb-5">
@@ -322,7 +332,7 @@ export default function GroomingPage() {
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {filtered.map((v) => <VendorCard key={v.id} vendor={v} activeTab={tab} />)}
+                  {filtered.map((v) => <VendorCard key={v.id} vendor={v} activeTab={tab} isOwnVendor={currentUserId === v.user_id} />)}
                 </div>
               )}
             </TabsContent>

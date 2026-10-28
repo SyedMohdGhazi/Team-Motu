@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
-import { Scissors, Heart, ShoppingBag, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
 async function getLiveCounts() {
@@ -27,142 +27,174 @@ async function getLiveCounts() {
   }
 }
 
+const tiles = [
+  {
+    emoji: "🏥",
+    title: "Veterinary Clinics",
+    subtitle: "Home & In-Clinic",
+    fullTitle: "Veterinary Clinics & Hospitals",
+    description:
+      "Connect with certified vets near Dehradun for check-ups, vaccinations, surgeries, and emergency care — at your doorstep or at the clinic.",
+    href: "/veterinary",
+    registerHref: "/vendor/dashboard",
+    registerLabel: "List your clinic",
+    countKey: "vets" as const,
+    color: "from-blue-500 to-sky-400",
+    bgGlow: "from-blue-500/15 via-sky-400/10 to-transparent",
+    badges: ["Home Visits", "In-Clinic", "Emergency"],
+  },
+  {
+    emoji: "✂️",
+    title: "Grooming Spas & Salons",
+    subtitle: "Home & Salon",
+    fullTitle: "Grooming Spas & Salons",
+    description:
+      "Book professional groomers for baths, haircuts, nail trims, and full spa packages — choose a doorstep visit or a salon appointment.",
+    href: "/grooming",
+    registerHref: "/vendor/dashboard",
+    registerLabel: "Register your salon",
+    countKey: "vendors" as const,
+    color: "from-violet-500 to-purple-400",
+    bgGlow: "from-violet-500/15 via-purple-400/10 to-transparent",
+    badges: ["At-Home", "Salon Visit", "Dogs & Cats"],
+  },
+  {
+    emoji: "🛍️",
+    title: "Medical Supplies",
+    subtitle: "Food & Toys Store",
+    fullTitle: "Medical Supplies, Food & Toys Store",
+    description:
+      "Shop vet-recommended medicines, flea treatments, pet food, toys, and grooming tools — sourced from trusted stores in Dehradun.",
+    href: "/medical-store",
+    registerHref: "/medical-store/register",
+    registerLabel: "Register your store",
+    countKey: "stores" as const,
+    color: "from-emerald-500 to-teal-400",
+    bgGlow: "from-emerald-500/15 via-teal-400/10 to-transparent",
+    badges: ["Medicines", "Pet Food", "Toys & Accessories"],
+  },
+  {
+    emoji: "🐾",
+    title: "Foster Homes",
+    subtitle: "Daycare & Pet Walking",
+    fullTitle: "Foster Homes, Daycare & Pet Walking",
+    description:
+      "Find loving foster homes, trusted daycare centres, and professional pet walkers. List animals for adoption or help a stray find a home.",
+    href: "/shelters",
+    registerHref: "/shelter/register",
+    registerLabel: "List your shelter",
+    countKey: "shelters" as const,
+    color: "from-rose-500 to-pink-400",
+    bgGlow: "from-rose-500/15 via-pink-400/10 to-transparent",
+    badges: ["Adopt a Pet", "Daycare", "Pet Walking"],
+  },
+];
+
 export default async function HomePage() {
   const counts = await getLiveCounts();
-
-  const tiles = [
-    {
-      icon: Scissors,
-      title: "Pet Grooming & Spa",
-      subtitle: "At-Home & Clinic Visits",
-      description:
-        "Book professional groomers near ISBT Dehradun. Choose between a doorstep visit or a clinic appointment for baths, haircuts, nail trims, and full spa packages.",
-      href: "/grooming",
-      registerHref: "/vendor/dashboard",
-      registerLabel: "Register your salon",
-      count: counts.vendors,
-      countLabel: counts.vendors === 1 ? "vendor active" : "vendors active",
-      color: "from-blue-500/10 to-indigo-500/10",
-      iconBg: "bg-blue-500",
-      badges: ["At-Home", "Clinic Visit", "Dogs & Cats"],
-    },
-    {
-      icon: Heart,
-      title: "Animal Shelters",
-      subtitle: "Adoption & Foster Directory",
-      description:
-        "Discover shelters, NGOs, and foster homes around Clement Town. Browse pets ready for adoption and find emergency helplines for stray animal rescue.",
-      href: "/shelters",
-      registerHref: "/shelter/register",
-      registerLabel: "Add your shelter",
-      count: counts.shelters,
-      countLabel: counts.shelters === 1 ? "shelter listed" : "shelters listed",
-      color: "from-rose-500/10 to-pink-500/10",
-      iconBg: "bg-rose-500",
-      badges: ["Adopt a Pet", "Foster Homes", "Rescue NGOs"],
-    },
-    {
-      icon: ShoppingBag,
-      title: "Medical Supplies",
-      subtitle: "Essentials for Cats & Dogs",
-      description:
-        "Shop vet-recommended medicines, flea & tick treatments, nutritional supplements, quality pet food, and grooming tools — all delivered to your door.",
-      href: "/medical-store",
-      registerHref: "/medical-store/register",
-      registerLabel: "Register your store",
-      count: counts.stores,
-      countLabel: counts.stores === 1 ? "store listed" : "stores listed",
-      color: "from-emerald-500/10 to-teal-500/10",
-      iconBg: "bg-emerald-500",
-      badges: ["Medicines", "Food", "Grooming Tools"],
-    },
-  ];
+  const allCounts = { ...counts, vets: 0 };
 
   return (
     <>
       <Navbar />
       <main className="flex min-h-[calc(100vh-3.5rem)] flex-col">
         {/* Hero */}
-        <section className="bg-gradient-to-b from-primary/8 to-background px-4 py-10 text-center sm:py-14">
-          <div className="mx-auto max-w-2xl">
+        <section className="relative overflow-hidden bg-gradient-to-b from-primary/10 to-background px-4 py-12 text-center sm:py-16">
+          <div className="mx-auto max-w-2xl relative z-10">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur">
+              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              Live · Dehradun, Uttarakhand
+            </div>
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">
               Everything your pet needs,{" "}
               <span className="text-primary">near you</span>
             </h1>
             <p className="mt-3 text-base text-muted-foreground sm:text-lg">
-              Grooming, adoption, and medical supplies — all within your chosen
-              distance from ISBT / Clement Town, Dehradun.
+              Vet care, grooming, supplies, and adoption — all in one place for pet parents in Dehradun.
             </p>
           </div>
         </section>
 
-        {/* Feature tiles */}
-        <section className="container mx-auto grid gap-5 px-4 pb-16 pt-6 sm:grid-cols-3">
-          {tiles.map(
-            ({
-              icon: Icon,
-              title,
-              subtitle,
-              description,
-              href,
-              registerHref,
-              registerLabel,
-              count,
-              countLabel,
-              color,
-              iconBg,
-              badges,
-            }) => (
-              <div
-                key={title}
-                className={`group relative flex flex-col rounded-2xl border bg-card shadow-sm overflow-hidden`}
-              >
-                <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-60`} />
+        {/* Service Tiles */}
+        <section className="container mx-auto grid gap-5 px-4 pb-16 pt-6 sm:grid-cols-2">
+          {tiles.map(({ emoji, title, subtitle, fullTitle, description, href, registerHref, registerLabel, countKey, color, bgGlow, badges }) => {
+            const count = allCounts[countKey];
+            return (
+              <div key={title} className="group relative flex flex-col rounded-2xl border bg-card shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
+                {/* Gradient glow */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${bgGlow} opacity-60 transition-opacity group-hover:opacity-80`} />
+
                 <div className="relative flex flex-col gap-4 p-6 flex-1">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-md ${iconBg}`}>
-                    <Icon className="h-6 w-6" />
+                  {/* Icon + count */}
+                  <div className="flex items-start justify-between">
+                    <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${color} text-2xl shadow-md`}>
+                      {emoji}
+                    </div>
+                    {count > 0 && (
+                      <span className="flex items-center gap-1.5 rounded-full border bg-background/80 px-2.5 py-1 text-xs font-semibold backdrop-blur">
+                        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                        {count} active
+                      </span>
+                    )}
                   </div>
+
+                  {/* Title */}
                   <div>
-                    <h2 className="text-xl font-bold leading-tight">{title}</h2>
-                    <p className="text-sm font-medium text-primary">{subtitle}</p>
+                    <h2 className="text-xl font-bold leading-tight">{fullTitle}</h2>
+                    <p className={`text-sm font-semibold mt-0.5 bg-gradient-to-r ${color} bg-clip-text text-transparent`}>
+                      {subtitle}
+                    </p>
                   </div>
+
+                  {/* Description */}
                   <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+
+                  {/* Badges */}
                   <div className="flex flex-wrap gap-1.5">
                     {badges.map((b) => (
-                      <span key={b} className="rounded-full border bg-background/80 px-2.5 py-0.5 text-xs font-medium">{b}</span>
+                      <span key={b} className="rounded-full border bg-background/80 px-2.5 py-0.5 text-xs font-medium">
+                        {b}
+                      </span>
                     ))}
                   </div>
 
                   {/* Footer */}
-                  <div className="mt-auto pt-3 border-t flex items-center justify-between gap-2">
-                    {count > 0 ? (
+                  <div className="mt-auto pt-4 border-t flex items-center justify-between gap-2">
+                    {count === 0 && registerHref && (
+                      <Link
+                        href={registerHref}
+                        className="text-xs text-primary hover:underline font-medium"
+                      >
+                        {registerLabel} →
+                      </Link>
+                    )}
+                    {count > 0 && (
                       <span className="text-xs text-muted-foreground">
-                        <strong className="text-foreground text-sm">{count}</strong>{" "}{countLabel}
+                        <strong className="text-foreground">{count}</strong>{" "}
+                        {count === 1 ? "listed" : "listed"} near you
                       </span>
-                    ) : (
-                      registerHref ? (
-                        <Link
-                          href={registerHref}
-                          className="text-xs text-primary hover:underline font-medium"
-                        >
-                          {registerLabel} →
-                        </Link>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Coming soon</span>
-                      )
                     )}
                     <Link
                       href={href}
-                      className="flex items-center gap-1 text-xs font-semibold text-primary hover:gap-2 transition-all"
+                      className={`ml-auto flex items-center gap-1.5 rounded-xl bg-gradient-to-r ${color} px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:gap-2.5 group/btn`}
                     >
-                      Explore <ArrowRight className="h-3.5 w-3.5" />
+                      Explore
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
                     </Link>
                   </div>
                 </div>
               </div>
-            )
-          )}
+            );
+          })}
         </section>
+
+        {/* Footer hint */}
+        <div className="pb-8 text-center text-xs text-muted-foreground">
+          Are you a vet, groomer, or store owner?{" "}
+          <Link href="/vendor/register" className="text-primary hover:underline">
+            Join as a vendor →
+          </Link>
+        </div>
       </main>
     </>
   );

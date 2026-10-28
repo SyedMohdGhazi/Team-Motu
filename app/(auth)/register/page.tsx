@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { PawPrint } from "lucide-react";
+import { PawPrint, Store } from "lucide-react";
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
@@ -31,7 +31,7 @@ export default function RegisterPage() {
     if (error) {
       toast({ title: "Registration failed", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Check your email", description: "We sent you a confirmation link." });
+      toast({ title: "Account created!", description: "Check your email to confirm your account." });
       router.push("/login");
     }
     setLoading(false);
@@ -46,7 +46,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle>Create account</CardTitle>
-          <CardDescription>Join Team Motu — it&apos;s free</CardDescription>
+          <CardDescription>Join Team Motu to book, adopt, and shop</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="grid gap-4">
@@ -93,6 +93,15 @@ export default function RegisterPage() {
               Sign in
             </Link>
           </p>
+          <div className="mt-4 pt-4 border-t text-center">
+            <Link
+              href="/vendor/register"
+              className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Store className="h-4 w-4" />
+              Register as a vendor / business →
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

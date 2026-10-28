@@ -34,18 +34,20 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/register");
+  const isAuthRoute =
+    request.nextUrl.pathname.startsWith("/login") ||
+    request.nextUrl.pathname.startsWith("/register") ||
+    request.nextUrl.pathname.startsWith("/vendor/login") ||
+    request.nextUrl.pathname.startsWith("/vendor/register");
 
   const isProtectedRoute =
     request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/grooming") ||
-    request.nextUrl.pathname.startsWith("/shelters") ||
-    request.nextUrl.pathname.startsWith("/medical-store");
+    request.nextUrl.pathname.startsWith("/vendor/dashboard");
 
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    const isVendorRoute = request.nextUrl.pathname.startsWith("/vendor/");
+    url.pathname = isVendorRoute ? "/vendor/login" : "/login";
     url.searchParams.set("redirectedFrom", request.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
