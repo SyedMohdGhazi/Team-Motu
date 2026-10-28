@@ -30,11 +30,10 @@ async function getLiveCounts() {
 const tiles = [
   {
     emoji: "🏥",
-    title: "Veterinary Clinics",
-    subtitle: "Home & In-Clinic",
     fullTitle: "Veterinary Clinics & Hospitals",
+    subtitle: "Home & In-Clinic",
     description:
-      "Connect with certified vets near Dehradun for check-ups, vaccinations, surgeries, and emergency care — at your doorstep or at the clinic.",
+      "Connect with certified vets for check-ups, vaccinations, surgeries, and emergency care — at your doorstep or at the clinic.",
     href: "/veterinary",
     registerHref: "/vendor/dashboard",
     registerLabel: "List your clinic",
@@ -42,12 +41,12 @@ const tiles = [
     color: "from-blue-500 to-sky-400",
     bgGlow: "from-blue-500/15 via-sky-400/10 to-transparent",
     badges: ["Home Visits", "In-Clinic", "Emergency"],
+    wide: false,
   },
   {
     emoji: "✂️",
-    title: "Grooming Spas & Salons",
-    subtitle: "Home & Salon",
     fullTitle: "Grooming Spas & Salons",
+    subtitle: "Home & Salon",
     description:
       "Book professional groomers for baths, haircuts, nail trims, and full spa packages — choose a doorstep visit or a salon appointment.",
     href: "/grooming",
@@ -57,14 +56,14 @@ const tiles = [
     color: "from-violet-500 to-purple-400",
     bgGlow: "from-violet-500/15 via-purple-400/10 to-transparent",
     badges: ["At-Home", "Salon Visit", "Dogs & Cats"],
+    wide: false,
   },
   {
     emoji: "🛍️",
-    title: "Medical Supplies",
-    subtitle: "Food & Toys Store",
-    fullTitle: "Medical Supplies, Food & Toys Store",
+    fullTitle: "Medical Supplies, Food & Toys",
+    subtitle: "Trusted Stores in Dehradun",
     description:
-      "Shop vet-recommended medicines, flea treatments, pet food, toys, and grooming tools — sourced from trusted stores in Dehradun.",
+      "Shop vet-recommended medicines, flea treatments, pet food, toys, and grooming tools — sourced from trusted local stores.",
     href: "/medical-store",
     registerHref: "/medical-store/register",
     registerLabel: "Register your store",
@@ -72,27 +71,43 @@ const tiles = [
     color: "from-emerald-500 to-teal-400",
     bgGlow: "from-emerald-500/15 via-teal-400/10 to-transparent",
     badges: ["Medicines", "Pet Food", "Toys & Accessories"],
+    wide: false,
   },
   {
     emoji: "🐾",
-    title: "Foster Homes",
-    subtitle: "Daycare & Pet Walking",
-    fullTitle: "Foster Homes, Daycare & Pet Walking",
+    fullTitle: "Foster Homes & Daycare",
+    subtitle: "Adoption · Foster · Daycare",
     description:
-      "Find loving foster homes, trusted daycare centres, and professional pet walkers. List animals for adoption or help a stray find a home.",
+      "Find loving foster homes and trusted daycare centres. Browse pets ready for adoption or help a stray find a forever home.",
     href: "/shelters",
     registerHref: "/shelter/register",
     registerLabel: "List your shelter",
     countKey: "shelters" as const,
     color: "from-rose-500 to-pink-400",
     bgGlow: "from-rose-500/15 via-pink-400/10 to-transparent",
-    badges: ["Adopt a Pet", "Daycare", "Pet Walking"],
+    badges: ["Adopt a Pet", "Foster Homes", "Daycare"],
+    wide: false,
+  },
+  {
+    emoji: "🦮",
+    fullTitle: "Daily Walkies",
+    subtitle: "On-Demand Pet Walks & Exercise",
+    description:
+      "Too busy for a walk? Book a certified pet walker for your dog or cat — scheduled daily walks, solo or group, tracked in real time.",
+    href: "/pet-walking",
+    registerHref: "/pet-walking/register",
+    registerLabel: "Register as a walker",
+    countKey: "walkers" as const,
+    color: "from-amber-500 to-orange-400",
+    bgGlow: "from-amber-500/15 via-orange-400/10 to-transparent",
+    badges: ["Solo Walks", "Group Walks", "Daily Schedule"],
+    wide: true,
   },
 ];
 
 export default async function HomePage() {
   const counts = await getLiveCounts();
-  const allCounts = { ...counts, vets: 0 };
+  const allCounts = { ...counts, vets: 0, walkers: 0 };
 
   return (
     <>
@@ -110,22 +125,23 @@ export default async function HomePage() {
               <span className="text-primary">near you</span>
             </h1>
             <p className="mt-3 text-base text-muted-foreground sm:text-lg">
-              Vet care, grooming, supplies, and adoption — all in one place for pet parents in Dehradun.
+              Vet care, grooming, supplies, adoption, and daily walks — all in one place for pet parents in Dehradun.
             </p>
           </div>
         </section>
 
-        {/* Service Tiles */}
-        <section className="container mx-auto grid gap-5 px-4 pb-16 pt-6 sm:grid-cols-2">
-          {tiles.map(({ emoji, title, subtitle, fullTitle, description, href, registerHref, registerLabel, countKey, color, bgGlow, badges }) => {
+        {/* Service Tiles — 2-col grid, last tile full-width */}
+        <section className="container mx-auto grid grid-cols-1 gap-5 px-4 pb-16 pt-6 sm:grid-cols-2">
+          {tiles.map(({ emoji, fullTitle, subtitle, description, href, registerHref, registerLabel, countKey, color, bgGlow, badges, wide }) => {
             const count = allCounts[countKey];
             return (
-              <div key={title} className="group relative flex flex-col rounded-2xl border bg-card shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
-                {/* Gradient glow */}
+              <div
+                key={fullTitle}
+                className={`group relative flex flex-col rounded-2xl border bg-card shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5${wide ? " sm:col-span-2 lg:col-span-1" : ""}`}
+              >
                 <div className={`absolute inset-0 bg-gradient-to-br ${bgGlow} opacity-60 transition-opacity group-hover:opacity-80`} />
 
                 <div className="relative flex flex-col gap-4 p-6 flex-1">
-                  {/* Icon + count */}
                   <div className="flex items-start justify-between">
                     <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${color} text-2xl shadow-md`}>
                       {emoji}
@@ -138,7 +154,6 @@ export default async function HomePage() {
                     )}
                   </div>
 
-                  {/* Title */}
                   <div>
                     <h2 className="text-xl font-bold leading-tight">{fullTitle}</h2>
                     <p className={`text-sm font-semibold mt-0.5 bg-gradient-to-r ${color} bg-clip-text text-transparent`}>
@@ -146,10 +161,8 @@ export default async function HomePage() {
                     </p>
                   </div>
 
-                  {/* Description */}
                   <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
 
-                  {/* Badges */}
                   <div className="flex flex-wrap gap-1.5">
                     {badges.map((b) => (
                       <span key={b} className="rounded-full border bg-background/80 px-2.5 py-0.5 text-xs font-medium">
@@ -158,20 +171,15 @@ export default async function HomePage() {
                     ))}
                   </div>
 
-                  {/* Footer */}
                   <div className="mt-auto pt-4 border-t flex items-center justify-between gap-2">
                     {count === 0 && registerHref && (
-                      <Link
-                        href={registerHref}
-                        className="text-xs text-primary hover:underline font-medium"
-                      >
+                      <Link href={registerHref} className="text-xs text-primary hover:underline font-medium">
                         {registerLabel} →
                       </Link>
                     )}
                     {count > 0 && (
                       <span className="text-xs text-muted-foreground">
-                        <strong className="text-foreground">{count}</strong>{" "}
-                        {count === 1 ? "listed" : "listed"} near you
+                        <strong className="text-foreground">{count}</strong> listed near you
                       </span>
                     )}
                     <Link
@@ -188,9 +196,8 @@ export default async function HomePage() {
           })}
         </section>
 
-        {/* Footer hint */}
         <div className="pb-8 text-center text-xs text-muted-foreground">
-          Are you a vet, groomer, or store owner?{" "}
+          Are you a vet, groomer, store owner, or walker?{" "}
           <Link href="/vendor/register" className="text-primary hover:underline">
             Join as a vendor →
           </Link>
