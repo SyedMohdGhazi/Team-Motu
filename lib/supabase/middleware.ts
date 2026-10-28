@@ -2,7 +2,6 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
-  // Skip auth checks when Supabase env vars are not configured yet
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return NextResponse.next({ request });
   }
@@ -30,28 +29,39 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  const path = request.nextUrl.pathname;
 
   const isAuthRoute =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/register") ||
-    request.nextUrl.pathname.startsWith("/vendor/login") ||
-    request.nextUrl.pathname.startsWith("/vendor/register");
+    path.startsWith("/login") ||
+    path.startsWith("/register") ||
+    path.startsWith("/vendor/login") ||
+    path.startsWith("/vendor/register");
+
+  const isAdminLoginRoute = path.startsWith("/admin/login");
+
+  const isAdminRoute = path.startsWith("/admin") && !isAdminLoginRoute;
 
   const isProtectedRoute =
-    request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/vendor/dashboard");
+    path.startsWith("/dashboard") ||
+    path.startsWith("/vendor/dashboard");
 
-  if (!user && isProtectedRoute) {
-    const url = request.nextUrl.clone();
-    const isVendorRoute = request.nextUrl.pathname.startsWith("/vendor/");
-    url.pathname = isVendorRoute ? "/vendor/login" : "/login";
-    url.searchParams.set("redirectedFrom", request.nextUrl.pathname);
-    return NextResponse.redirect(url);
+  // Unauthenticated → redirect to appropriate login
+  if (!user) {
+    if (isAdminRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/login";
+      return NextResponse.redirect(url);
+    }
+    if (isProtectedRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = path.startsWith("/vendor/") ? "/vendor/login" : "/login";
+      url.searchParams.set("redirectedFrom", path);
+      return NextResponse.redirect(url);
+    }
   }
 
+  // Authenticated on auth routes → redirect away
   if (user && isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";

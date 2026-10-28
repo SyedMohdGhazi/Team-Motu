@@ -165,6 +165,7 @@ export default function VendorDashboardPage() {
     offers_home_service: true, offers_clinic_visit: true,
   });
   const [vendorId, setVendorId] = useState<string | null>(null);
+  const [approvalStatus, setApprovalStatus] = useState<"pending" | "approved" | "rejected" | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [addServiceOpen, setAddServiceOpen] = useState(false);
@@ -186,6 +187,7 @@ export default function VendorDashboardPage() {
 
       if (vendor) {
         setVendorId(vendor.id);
+        setApprovalStatus(vendor.approval_status ?? "pending");
         setProfile({
           id: vendor.id,
           business_name: vendor.business_name ?? "",
@@ -288,6 +290,42 @@ export default function VendorDashboardPage() {
     <>
       <Navbar />
       <main className="container mx-auto max-w-4xl px-4 py-6">
+        {/* Approval status banner */}
+        {approvalStatus && approvalStatus !== "approved" && (
+          <div className={`mb-6 rounded-xl border p-4 text-sm flex items-start gap-3 ${
+            approvalStatus === "pending"
+              ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+              : "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
+          }`}>
+            {approvalStatus === "pending" ? (
+              <>
+                <Clock className="h-5 w-5 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Your listing is under review</p>
+                  <p className="text-xs mt-0.5 opacity-80">
+                    Our team will review and approve your profile shortly. You won&apos;t be visible to customers until approved.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <XCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Your listing was not approved</p>
+                  <p className="text-xs mt-0.5 opacity-80">
+                    Please update your profile information and contact support if you think this is a mistake.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        {approvalStatus === "approved" && (
+          <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm flex items-center gap-3 text-emerald-700 dark:text-emerald-300">
+            <CheckCircle2 className="h-5 w-5 shrink-0" />
+            <p className="font-semibold">Your listing is live and visible to customers</p>
+          </div>
+        )}
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Vendor Dashboard</h1>

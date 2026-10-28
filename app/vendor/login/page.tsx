@@ -49,7 +49,12 @@ export default function VendorLoginPage() {
       return;
     }
 
-    router.push("/vendor/dashboard");
+    // admin gets their own portal, vendor goes to vendor dashboard
+    if (profile?.role === "admin") {
+      router.push("/admin");
+    } else {
+      router.push("/vendor/dashboard");
+    }
     router.refresh();
   }
 
