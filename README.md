@@ -24,7 +24,7 @@ Team Motu connects pet owners in Dehradun with trusted local services — all in
 | 🏥 **Veterinary Clinics & Hospitals** | Book home visits or in-clinic appointments with certified vets |
 | ✂️ **Grooming Spas & Salons** | Schedule at-home or salon grooming sessions |
 | 🛍️ **Medical Supplies, Food & Toys** | Browse trusted local pet stores |
-| 🐾 **Foster Homes & Daycare** | Find shelters, foster homes, and daycare centres; list pets for adoption |
+| 🐾 **Foster Homes & Daycare** | Find trusted shelters, foster homes, and daycare centres for your pet |
 | 🦮 **Daily Walkies** | Book certified pet walkers for solo or group walks |
 
 ---
@@ -35,7 +35,6 @@ Team Motu connects pet owners in Dehradun with trusted local services — all in
 - Browse all services without signing in
 - Book grooming appointments with a 3-step flow (date/time → pet details → confirm)
 - View booking history with live status updates (Pending / Accepted / Rejected / Completed)
-- List pets for adoption from the Shelters page
 
 ### For Vendors
 - Separate vendor registration and login portal
@@ -113,7 +112,7 @@ app/
 ├── vendor/           # Vendor login, register, dashboard
 ├── dashboard/        # Customer dashboard & booking history
 ├── grooming/         # Grooming listings & booking flow
-├── shelters/         # Shelter/adoption directory
+├── shelters/         # Shelter & foster homes directory
 ├── medical-store/    # Medical store listings
 ├── veterinary/       # Veterinary clinics (coming soon)
 ├── pet-walking/      # Pet walker listings & registration

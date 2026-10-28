@@ -11,7 +11,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Team Motu — Pet Services Platform",
   description:
-    "Find vets, grooming salons, adopt pets, and shop medical supplies in Dehradun.",
+    "Find vets, grooming salons, shelters, and pet supplies in Dehradun.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

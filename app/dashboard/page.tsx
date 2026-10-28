@@ -6,7 +6,7 @@ import { Scissors, Heart, ShoppingBag, CalendarDays, ArrowRight } from "lucide-r
 
 const quickLinks = [
   { icon: Scissors, title: "Book Grooming", description: "At-home or clinic visits", href: "/grooming", color: "text-blue-500" },
-  { icon: Heart, title: "Animal Shelters", description: "Find pets for adoption", href: "/shelters", color: "text-rose-500" },
+  { icon: Heart, title: "Animal Shelters", description: "Foster homes & daycare", href: "/shelters", color: "text-rose-500" },
   { icon: ShoppingBag, title: "Medical Store", description: "Medicines & supplies", href: "/medical-store", color: "text-emerald-500" },
   { icon: CalendarDays, title: "My Bookings", description: "View appointments", href: "/dashboard/bookings", color: "text-violet-500" },
 ];

@@ -46,7 +46,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle>Create account</CardTitle>
-          <CardDescription>Join Team Motu to book, adopt, and shop</CardDescription>
+          <CardDescription>Join Team Motu to book, shop, and care for your pets</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="grid gap-4">

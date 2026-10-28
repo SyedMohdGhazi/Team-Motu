@@ -76,16 +76,16 @@ const tiles = [
   {
     emoji: "🐾",
     fullTitle: "Foster Homes & Daycare",
-    subtitle: "Adoption · Foster · Daycare",
+    subtitle: "Foster · Daycare · Shelter",
     description:
-      "Find loving foster homes and trusted daycare centres. Browse pets ready for adoption or help a stray find a forever home.",
+      "Find trusted foster homes, shelter homes, and daycare centres for your pet in Dehradun. Safe, caring spaces while you need them.",
     href: "/shelters",
     registerHref: "/shelter/register",
     registerLabel: "List your shelter",
     countKey: "shelters" as const,
     color: "from-rose-500 to-pink-400",
     bgGlow: "from-rose-500/15 via-pink-400/10 to-transparent",
-    badges: ["Adopt a Pet", "Foster Homes", "Daycare"],
+    badges: ["Foster Homes", "Daycare", "Shelters"],
     wide: false,
   },
   {
@@ -125,7 +125,7 @@ export default async function HomePage() {
               <span className="text-primary">near you</span>
             </h1>
             <p className="mt-3 text-base text-muted-foreground sm:text-lg">
-              Vet care, grooming, supplies, adoption, and daily walks — all in one place for pet parents in Dehradun.
+              Vet care, grooming, supplies, shelters, and daily walks — all in one place for pet parents in Dehradun.
             </p>
           </div>
         </section>

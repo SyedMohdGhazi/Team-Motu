@@ -192,7 +192,7 @@ export default function ShelterRegisterPage() {
             </CardHeader>
             <CardContent className="grid gap-3">
               <p className="text-xs text-muted-foreground">
-                Show potential adopters and fosters what your space looks like. Good photos increase enquiries.
+                Show potential fosters and pet owners what your space looks like. Good photos increase enquiries.
               </p>
               <div className="grid grid-cols-4 gap-2">
                 {photos.map(({ preview }, i) => (
