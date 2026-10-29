@@ -9,13 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
 
 export default function PetWalkerRegisterPage() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [area, setArea] = useState("");
+  const [petTypes, setPetTypes] = useState("");
   const [bio, setBio] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -39,6 +40,7 @@ export default function PetWalkerRegisterPage() {
       full_name: fullName,
       phone,
       service_area: area,
+      pet_types: petTypes || null,
       bio: bio || null,
       is_active: false,
       approval_status: "pending",
@@ -113,6 +115,19 @@ export default function PetWalkerRegisterPage() {
                 />
               </div>
               <div className="grid gap-1.5">
+                <Label>Animals you walk</Label>
+                <Select value={petTypes} onValueChange={setPetTypes} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select animal type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dogs">🐶 Dogs only</SelectItem>
+                    <SelectItem value="cats">🐱 Cats only</SelectItem>
+                    <SelectItem value="both">🐶🐱 Both dogs & cats</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
                 <Label htmlFor="bio">About you (optional)</Label>
                 <Textarea
                   id="bio"
@@ -125,7 +140,7 @@ export default function PetWalkerRegisterPage() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-400 text-white hover:opacity-90"
-                disabled={loading}
+                disabled={loading || !petTypes}
               >
                 {loading ? "Submitting…" : "Submit for review"}
               </Button>
