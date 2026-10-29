@@ -144,7 +144,7 @@ export default function AdminDashboardClient({ adminEmail }: { adminEmail: strin
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | ApprovalStatus>("pending");
+  const [filter, setFilter] = useState<"all" | ApprovalStatus>("all");
   const [addAdminOpen, setAddAdminOpen] = useState(false);
   const supabase = createClient();
   const router = useRouter();

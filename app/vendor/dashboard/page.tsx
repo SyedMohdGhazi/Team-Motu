@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -171,12 +172,24 @@ export default function VendorDashboardPage() {
   const [addServiceOpen, setAddServiceOpen] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
+  const router = useRouter();
 
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
+
+      // Redirect customers — this portal is vendors only
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: userProfile } = await (supabase.from("users") as any)
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (userProfile?.role === "customer") {
+        router.push("/dashboard");
+        return;
+      }
 
       // Load vendor profile
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

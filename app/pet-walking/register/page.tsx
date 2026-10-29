@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 export default function PetWalkerRegisterPage() {
   const [fullName, setFullName] = useState("");
@@ -20,9 +20,38 @@ export default function PetWalkerRegisterPage() {
   const [petTypes, setPetTypes] = useState("");
   const [bio, setBio] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
   const supabase = createClient();
+
+  useEffect(() => {
+    async function checkVendorAuth() {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: "Sign in required", description: "Please sign in to your vendor account first.", variant: "destructive" });
+        router.push("/vendor/login");
+        return;
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profile } = await (supabase.from("users") as any)
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (profile?.role !== "vendor") {
+        toast({
+          title: "Vendor account required",
+          description: "Only vendors can register as pet walkers. Please create a vendor account first.",
+          variant: "destructive",
+        });
+        router.push("/vendor/register");
+        return;
+      }
+      setChecking(false);
+    }
+    checkVendorAuth();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,11 +82,19 @@ export default function PetWalkerRegisterPage() {
       toast({ title: "Registration failed", description: error.message, variant: "destructive" });
     } else {
       toast({
-        title: "You're registered!",
-        description: "We'll review your profile and activate it shortly.",
+        title: "Profile submitted!",
+        description: "We'll review your walker profile and activate it shortly.",
       });
       router.push("/vendor/dashboard");
     }
+  }
+
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
@@ -146,12 +183,6 @@ export default function PetWalkerRegisterPage() {
                 {loading ? "Submitting…" : "Submit for review"}
               </Button>
             </form>
-            <p className="mt-4 text-center text-xs text-muted-foreground">
-              Already have an account?{" "}
-              <Link href="/vendor/login" className="text-primary hover:underline">
-                Sign in
-              </Link>
-            </p>
           </CardContent>
         </Card>
       </div>
