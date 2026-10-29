@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { updateVendorStatus } from "./actions";
 
 type ApprovalStatus = "pending" | "approved" | "rejected";
 
@@ -50,7 +51,7 @@ function formatDate(d: string) {
 }
 
 const VENDOR_TABS = [
-  { key: "grooming_vendors", label: "Grooming",    icon: Scissors,   nameField: "business_name" },
+  { key: "grooming_vendors", label: "Grooming",    icon: Scissors,    nameField: "business_name" },
   { key: "medical_stores",   label: "Med Stores",  icon: ShoppingBag, nameField: "store_name" },
   { key: "shelters",         label: "Shelters",    icon: Heart,       nameField: "name" },
   { key: "pet_walkers",      label: "Pet Walkers", icon: PawPrint,    nameField: "full_name" },
@@ -137,65 +138,35 @@ function AddAdminDialog({ open, onClose, onAdded }: {
   );
 }
 
-export default function AdminDashboardClient({ adminEmail }: { adminEmail: string }) {
-  const [data, setData] = useState<Record<TableKey, VendorRow[]>>({
-    grooming_vendors: [], medical_stores: [], shelters: [], pet_walkers: [],
-  });
-  const [admins, setAdmins] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState<string | null>(null);
+interface Props {
+  adminEmail: string;
+  initialData: Record<TableKey, VendorRow[]>;
+  initialAdmins: AdminUser[];
+}
+
+export default function AdminDashboardClient({ adminEmail, initialData, initialAdmins }: Props) {
   const [filter, setFilter] = useState<"all" | ApprovalStatus>("all");
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const [addAdminOpen, setAddAdminOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const supabase = createClient();
   const router = useRouter();
   const { toast } = useToast();
 
-  async function getAuthHeader(): Promise<Record<string, string>> {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token ? { "Authorization": `Bearer ${session.access_token}` } : {};
+  function refresh() {
+    startTransition(() => { router.refresh(); });
   }
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) {
-      toast({ title: "Not authenticated", description: "Please sign in again.", variant: "destructive" });
-      setLoading(false);
-      return;
-    }
-    const res = await fetch("/api/admin/vendors", {
-      headers: { "Authorization": `Bearer ${token}` },
-    });
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
-      toast({ title: "Failed to load data", description: json.error ?? `Error ${res.status}`, variant: "destructive" });
-      setLoading(false);
-      return;
-    }
-    const json = await res.json();
-    setData(json.vendors as Record<TableKey, VendorRow[]>);
-    setAdmins(json.admins as AdminUser[]);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { loadAll(); }, [loadAll]);
-
   async function setStatus(table: TableKey, id: string, status: "approved" | "rejected") {
-    setProcessing(id);
-    const authHeader = await getAuthHeader();
-    const res = await fetch("/api/admin/vendors", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeader },
-      body: JSON.stringify({ table, id, status }),
-    });
-    const json = await res.json();
-    setProcessing(null);
-    if (!res.ok) {
-      toast({ title: "Update failed", description: json.error, variant: "destructive" });
-    } else {
+    setProcessingId(id);
+    try {
+      await updateVendorStatus(table, id, status);
       toast({ title: status === "approved" ? "Vendor approved ✓" : "Vendor rejected" });
-      loadAll();
+      refresh();
+    } catch (err) {
+      toast({ title: "Update failed", description: String(err), variant: "destructive" });
+    } finally {
+      setProcessingId(null);
     }
   }
 
@@ -204,9 +175,14 @@ export default function AdminDashboardClient({ adminEmail }: { adminEmail: strin
     router.push("/admin/login");
   }
 
+  const data = initialData;
+  const admins = initialAdmins;
+
   const pendingCount = VENDOR_TABS.reduce((sum, { key }) =>
     sum + data[key].filter((r) => r.approval_status === "pending").length, 0
   );
+
+  const isLoading = isPending;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -225,10 +201,11 @@ export default function AdminDashboardClient({ adminEmail }: { adminEmail: strin
           <div className="flex items-center gap-3">
             <span className="text-xs text-zinc-500 hidden sm:inline">{adminEmail}</span>
             <button
-              onClick={loadAll}
-              className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition-colors"
+              onClick={refresh}
+              disabled={isLoading}
+              className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
             </button>
             <button
               onClick={handleSignOut}
@@ -279,171 +256,163 @@ export default function AdminDashboardClient({ adminEmail }: { adminEmail: strin
           })}
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
-          </div>
-        ) : (
-          <Tabs defaultValue="grooming_vendors">
-            <TabsList className="bg-zinc-900 border border-zinc-800 mb-6 flex-wrap h-auto gap-1">
-              {VENDOR_TABS.map(({ key, label, icon: Icon }) => {
-                const pendingN = data[key].filter((r) => r.approval_status === "pending").length;
-                return (
-                  <TabsTrigger
-                    key={key}
-                    value={key}
-                    className="data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100 text-zinc-400 gap-1.5"
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {label}
-                    {pendingN > 0 && (
-                      <span className="rounded-full bg-amber-500 text-zinc-900 text-xs font-bold px-1.5 py-px ml-0.5">
-                        {pendingN}
-                      </span>
-                    )}
-                  </TabsTrigger>
-                );
-              })}
-              {/* Admin Users tab */}
-              <TabsTrigger
-                value="admins"
-                className="data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100 text-zinc-400 gap-1.5 ml-auto"
-              >
-                <Users className="h-3.5 w-3.5" /> Admins
-                <span className="rounded-full bg-zinc-700 text-zinc-300 text-xs px-1.5 py-px">
-                  {admins.length}
-                </span>
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Vendor tabs */}
-            {VENDOR_TABS.map(({ key, nameField }) => {
-              const rows = data[key].filter((r) =>
-                filter === "all" ? true : r.approval_status === filter
-              );
+        <Tabs defaultValue="grooming_vendors">
+          <TabsList className="bg-zinc-900 border border-zinc-800 mb-6 flex-wrap h-auto gap-1">
+            {VENDOR_TABS.map(({ key, label, icon: Icon }) => {
+              const pendingN = data[key].filter((r) => r.approval_status === "pending").length;
               return (
-                <TabsContent key={key} value={key}>
-                  {rows.length === 0 ? (
-                    <div className="py-16 text-center text-zinc-500">
-                      <p>No {filter === "all" ? "" : filter} entries for this category.</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      {rows.map((row) => {
-                        const displayName =
-                          (row as unknown as Record<string, unknown>)[nameField] as string | null
-                          ?? row.email ?? "—";
-                        const ownerEmail = row.email ?? row.phone ?? "—";
-                        const st = STATUS_CHIP[row.approval_status] ?? STATUS_CHIP.pending;
-                        const isPending = row.approval_status === "pending";
-                        return (
-                          <div
-                            key={row.id}
-                            className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 flex flex-col sm:flex-row sm:items-center gap-4"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="font-semibold text-zinc-100 truncate">{displayName}</p>
-                                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold shrink-0 ${st.cls}`}>
-                                  {st.label}
-                                </span>
-                              </div>
-                              <p className="text-xs text-zinc-500">{ownerEmail}</p>
-                              <div className="flex items-center gap-3 mt-1.5 text-xs text-zinc-600">
-                                {row.city && <span>{row.city}</span>}
-                                {row.phone && <span>{row.phone}</span>}
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" /> {formatDate(row.created_at)}
-                                </span>
-                              </div>
-                            </div>
-                            {isPending && (
-                              <div className="flex items-center gap-2 shrink-0">
-                                <Button
-                                  size="sm"
-                                  disabled={processing === row.id}
-                                  onClick={() => setStatus(key, row.id, "approved")}
-                                  className="bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5"
-                                >
-                                  {processing === row.id
-                                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    : <CheckCircle2 className="h-3.5 w-3.5" />}
-                                  Approve
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  disabled={processing === row.id}
-                                  onClick={() => setStatus(key, row.id, "rejected")}
-                                  className="border-red-500/40 text-red-400 hover:bg-red-500/10 gap-1.5"
-                                >
-                                  <XCircle className="h-3.5 w-3.5" /> Reject
-                                </Button>
-                              </div>
-                            )}
-                            {!isPending && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                disabled={processing === row.id}
-                                onClick={() => setStatus(key, row.id, row.approval_status === "approved" ? "rejected" : "approved")}
-                                className="text-zinc-500 hover:text-zinc-300 shrink-0 text-xs"
-                              >
-                                {row.approval_status === "approved" ? "Revoke" : "Re-approve"}
-                              </Button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                <TabsTrigger
+                  key={key}
+                  value={key}
+                  className="data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100 text-zinc-400 gap-1.5"
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                  {pendingN > 0 && (
+                    <span className="rounded-full bg-amber-500 text-zinc-900 text-xs font-bold px-1.5 py-px ml-0.5">
+                      {pendingN}
+                    </span>
                   )}
-                </TabsContent>
+                </TabsTrigger>
               );
             })}
+            <TabsTrigger
+              value="admins"
+              className="data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100 text-zinc-400 gap-1.5 ml-auto"
+            >
+              <Users className="h-3.5 w-3.5" /> Admins
+              <span className="rounded-full bg-zinc-700 text-zinc-300 text-xs px-1.5 py-px">
+                {admins.length}
+              </span>
+            </TabsTrigger>
+          </TabsList>
 
-            {/* Admin Users tab */}
-            <TabsContent value="admins">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-zinc-400">{admins.length} admin account{admins.length !== 1 ? "s" : ""}</p>
-                <Button
-                  size="sm"
-                  onClick={() => setAddAdminOpen(true)}
-                  className="bg-zinc-100 text-zinc-900 hover:bg-zinc-200 gap-1.5"
-                >
-                  <UserPlus className="h-4 w-4" /> Add Admin
-                </Button>
-              </div>
-              <div className="flex flex-col gap-2">
-                {admins.map((a) => (
-                  <div
-                    key={a.id}
-                    className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 flex items-center gap-4"
-                  >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800 shrink-0">
-                      <ShieldCheck className="h-4 w-4 text-zinc-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-zinc-100 text-sm">
-                        {a.full_name ?? a.email}
-                        {a.email === adminEmail && (
-                          <span className="ml-2 text-xs text-zinc-500">(you)</span>
-                        )}
-                      </p>
-                      {a.full_name && <p className="text-xs text-zinc-500">{a.email}</p>}
-                    </div>
-                    <p className="text-xs text-zinc-600 shrink-0">{formatDate(a.created_at)}</p>
+          {VENDOR_TABS.map(({ key, nameField }) => {
+            const rows = data[key].filter((r) =>
+              filter === "all" ? true : r.approval_status === filter
+            );
+            return (
+              <TabsContent key={key} value={key}>
+                {rows.length === 0 ? (
+                  <div className="py-16 text-center text-zinc-500">
+                    <p>No {filter === "all" ? "" : filter} entries for this category.</p>
                   </div>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
-        )}
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {rows.map((row) => {
+                      const displayName =
+                        (row as unknown as Record<string, unknown>)[nameField] as string | null
+                        ?? row.email ?? "—";
+                      const ownerEmail = row.email ?? row.phone ?? "—";
+                      const st = STATUS_CHIP[row.approval_status] ?? STATUS_CHIP.pending;
+                      const isPendingRow = row.approval_status === "pending";
+                      const isProcessing = processingId === row.id;
+                      return (
+                        <div
+                          key={row.id}
+                          className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 flex flex-col sm:flex-row sm:items-center gap-4"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-semibold text-zinc-100 truncate">{displayName}</p>
+                              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold shrink-0 ${st.cls}`}>
+                                {st.label}
+                              </span>
+                            </div>
+                            <p className="text-xs text-zinc-500">{ownerEmail}</p>
+                            <div className="flex items-center gap-3 mt-1.5 text-xs text-zinc-600">
+                              {row.city && <span>{row.city}</span>}
+                              {row.phone && <span>{row.phone}</span>}
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" /> {formatDate(row.created_at)}
+                              </span>
+                            </div>
+                          </div>
+                          {isPendingRow && (
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Button
+                                size="sm"
+                                disabled={isProcessing}
+                                onClick={() => setStatus(key, row.id, "approved")}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5"
+                              >
+                                {isProcessing
+                                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  : <CheckCircle2 className="h-3.5 w-3.5" />}
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={isProcessing}
+                                onClick={() => setStatus(key, row.id, "rejected")}
+                                className="border-red-500/40 text-red-400 hover:bg-red-500/10 gap-1.5"
+                              >
+                                <XCircle className="h-3.5 w-3.5" /> Reject
+                              </Button>
+                            </div>
+                          )}
+                          {!isPendingRow && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={isProcessing}
+                              onClick={() => setStatus(key, row.id, row.approval_status === "approved" ? "rejected" : "approved")}
+                              className="text-zinc-500 hover:text-zinc-300 shrink-0 text-xs"
+                            >
+                              {row.approval_status === "approved" ? "Revoke" : "Re-approve"}
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+            );
+          })}
+
+          <TabsContent value="admins">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-zinc-400">{admins.length} admin account{admins.length !== 1 ? "s" : ""}</p>
+              <Button
+                size="sm"
+                onClick={() => setAddAdminOpen(true)}
+                className="bg-zinc-100 text-zinc-900 hover:bg-zinc-200 gap-1.5"
+              >
+                <UserPlus className="h-4 w-4" /> Add Admin
+              </Button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {admins.map((a) => (
+                <div
+                  key={a.id}
+                  className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 flex items-center gap-4"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800 shrink-0">
+                    <ShieldCheck className="h-4 w-4 text-zinc-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-zinc-100 text-sm">
+                      {a.full_name ?? a.email}
+                      {a.email === adminEmail && (
+                        <span className="ml-2 text-xs text-zinc-500">(you)</span>
+                      )}
+                    </p>
+                    {a.full_name && <p className="text-xs text-zinc-500">{a.email}</p>}
+                  </div>
+                  <p className="text-xs text-zinc-600 shrink-0">{formatDate(a.created_at)}</p>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
 
       <AddAdminDialog
         open={addAdminOpen}
         onClose={() => setAddAdminOpen(false)}
-        onAdded={loadAll}
+        onAdded={refresh}
       />
     </div>
   );
