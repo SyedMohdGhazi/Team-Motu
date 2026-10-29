@@ -152,25 +152,15 @@ export default function AdminDashboardClient({ adminEmail }: { adminEmail: strin
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [vendorResults, adminResult] = await Promise.all([
-      Promise.all(
-        VENDOR_TABS.map(async ({ key }) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: rows, error } = await (supabase.from(key) as any)
-            .select("*")
-            .order("created_at", { ascending: false });
-          if (error) console.error(`[admin] ${key} query failed:`, error.message);
-          return [key, rows ?? []] as [TableKey, VendorRow[]];
-        })
-      ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (supabase.from("users") as any)
-        .select("id, email, full_name, created_at")
-        .eq("role", "admin")
-        .order("created_at", { ascending: true }),
-    ]);
-    setData(Object.fromEntries(vendorResults) as Record<TableKey, VendorRow[]>);
-    setAdmins(adminResult.data ?? []);
+    const res = await fetch("/api/admin/vendors");
+    if (!res.ok) {
+      toast({ title: "Failed to load data", description: "Check your connection and try again.", variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+    const json = await res.json();
+    setData(json.vendors as Record<TableKey, VendorRow[]>);
+    setAdmins(json.admins as AdminUser[]);
     setLoading(false);
   }, []);
 
@@ -178,19 +168,15 @@ export default function AdminDashboardClient({ adminEmail }: { adminEmail: strin
 
   async function setStatus(table: TableKey, id: string, status: "approved" | "rejected") {
     setProcessing(id);
-    // Update is_active first — this column always exists
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from(table) as any)
-      .update({ is_active: status === "approved" })
-      .eq("id", id);
-    // Best-effort: update approval_status (column may not exist yet on older tables)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from(table) as any)
-      .update({ approval_status: status })
-      .eq("id", id);
+    const res = await fetch("/api/admin/vendors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ table, id, status }),
+    });
+    const json = await res.json();
     setProcessing(null);
-    if (error) {
-      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+    if (!res.ok) {
+      toast({ title: "Update failed", description: json.error, variant: "destructive" });
     } else {
       toast({ title: status === "approved" ? "Vendor approved ✓" : "Vendor rejected" });
       loadAll();
@@ -240,7 +226,20 @@ export default function AdminDashboardClient({ adminEmail }: { adminEmail: strin
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-3 mb-8">
+        <div className="grid grid-cols-4 gap-3 mb-8">
+          <button
+            onClick={() => setFilter("all")}
+            className={`rounded-xl border p-4 text-left transition-colors ${
+              filter === "all"
+                ? "border-zinc-500/50 bg-zinc-800"
+                : "border-zinc-800 bg-zinc-900 hover:border-zinc-700"
+            }`}
+          >
+            <p className="text-2xl font-bold">
+              {VENDOR_TABS.reduce((s, { key }) => s + data[key].length, 0)}
+            </p>
+            <p className="text-xs text-zinc-400 mt-0.5">All</p>
+          </button>
           {(["pending", "approved", "rejected"] as const).map((s) => {
             const total = VENDOR_TABS.reduce((sum, { key }) =>
               sum + data[key].filter((r) => r.approval_status === s).length, 0
