@@ -225,7 +225,7 @@ export default function VendorDashboardPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSavingProfile(false); return; }
 
-    const payload = {
+    const basePayload = {
       user_id: user.id,
       business_name: profile.business_name,
       description: profile.description || null,
@@ -237,22 +237,23 @@ export default function VendorDashboardPage() {
       longitude: profile.longitude ? parseFloat(profile.longitude) : null,
       offers_home_service: profile.offers_home_service,
       offers_clinic_visit: profile.offers_clinic_visit,
-      is_active: true,
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = vendorId
+      // Update: never touch is_active or approval_status — admin controls those
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ? await (supabase.from("grooming_vendors") as any).update(payload).eq("id", vendorId).select().single()
+      ? await (supabase.from("grooming_vendors") as any).update(basePayload).eq("id", vendorId).select().single()
+      // New listing: start inactive, pending admin approval
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      : await (supabase.from("grooming_vendors") as any).insert(payload).select().single();
+      : await (supabase.from("grooming_vendors") as any).insert({ ...basePayload, is_active: false, approval_status: "pending" }).select().single();
 
     setSavingProfile(false);
     if (error) {
       toast({ title: "Failed to save", description: error.message, variant: "destructive" });
     } else {
       if (!vendorId) setVendorId(data.id);
-      toast({ title: "Profile saved!", description: "Your business is now live on Team Motu." });
+      toast({ title: vendorId ? "Profile updated!" : "Business registered!", description: vendorId ? "Your changes have been saved." : "Your listing is under review and will go live once approved." });
       // Also update user role to vendor
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase.from("users") as any).update({ role: "vendor" }).eq("id", user.id);

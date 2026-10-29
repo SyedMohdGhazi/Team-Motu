@@ -41,6 +41,7 @@ export default function PetWalkerRegisterPage() {
       service_area: area,
       bio: bio || null,
       is_active: false,
+      approval_status: "pending",
     });
 
     setLoading(false);
