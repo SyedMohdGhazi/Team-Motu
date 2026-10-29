@@ -1,4 +1,3 @@
-import { createClient as createServerSupabase } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -12,78 +11,105 @@ function serviceClient() {
   });
 }
 
-async function verifyAdmin() {
-  const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: profile } = await (supabase.from("users") as any)
+async function verifyAdmin(request: NextRequest) {
+  const authHeader = request.headers.get("Authorization");
+  const token = authHeader?.replace("Bearer ", "").trim();
+  if (!token) return null;
+
+  const admin = serviceClient();
+
+  // Verify the token and get the user (service role bypasses RLS)
+  const { data: { user }, error } = await admin.auth.getUser(token);
+  if (error || !user) return null;
+
+  // Check role in public.users
+  const { data: profile } = await admin
+    .from("users")
     .select("role")
     .eq("id", user.id)
     .single();
+
   return profile?.role === "admin" ? user : null;
 }
 
 // GET /api/admin/vendors — fetch all rows from every vendor table + admin users
-export async function GET() {
-  const adminUser = await verifyAdmin();
-  if (!adminUser) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+export async function GET(request: NextRequest) {
+  try {
+    const adminUser = await verifyAdmin(request);
+    if (!adminUser) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-  const admin = serviceClient();
+    const admin = serviceClient();
 
-  const [vendorResults, adminsResult] = await Promise.all([
-    Promise.all(
-      TABLES.map(async (table) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error } = await (admin.from(table) as any)
-          .select("*")
-          .order("created_at", { ascending: false });
-        if (error) console.error(`[admin api] ${table}:`, error.message);
-        return [table, data ?? []] as const;
-      })
-    ),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (admin.from("users") as any)
-      .select("id, email, full_name, created_at")
-      .eq("role", "admin")
-      .order("created_at", { ascending: true }),
-  ]);
+    const [vendorResults, adminsResult] = await Promise.all([
+      Promise.all(
+        TABLES.map(async (table) => {
+          const { data, error } = await admin
+            .from(table)
+            .select("*")
+            .order("created_at", { ascending: false });
+          if (error) console.error(`[admin api] ${table}:`, error.message);
+          return [table, data ?? []] as const;
+        })
+      ),
+      admin
+        .from("users")
+        .select("id, email, full_name, created_at")
+        .eq("role", "admin")
+        .order("created_at", { ascending: true }),
+    ]);
 
-  return NextResponse.json({
-    vendors: Object.fromEntries(vendorResults),
-    admins: adminsResult.data ?? [],
-  });
+    return NextResponse.json({
+      vendors: Object.fromEntries(vendorResults),
+      admins: adminsResult.data ?? [],
+    });
+  } catch (err) {
+    console.error("[admin api] GET error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }
 
 // POST /api/admin/vendors — approve or reject a vendor
 export async function POST(request: NextRequest) {
-  const adminUser = await verifyAdmin();
-  if (!adminUser) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  try {
+    const adminUser = await verifyAdmin(request);
+    if (!adminUser) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-  const { table, id, status } = await request.json() as {
-    table: string;
-    id: string;
-    status: "approved" | "rejected";
-  };
+    const { table, id, status } = (await request.json()) as {
+      table: string;
+      id: string;
+      status: "approved" | "rejected";
+    };
 
-  if (!TABLES.includes(table as (typeof TABLES)[number]) || !id || !["approved", "rejected"].includes(status)) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    if (
+      !TABLES.includes(table as (typeof TABLES)[number]) ||
+      !id ||
+      !["approved", "rejected"].includes(status)
+    ) {
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    }
+
+    const admin = serviceClient();
+
+    // Update is_active first (always exists)
+    const { error } = await admin
+      .from(table)
+      .update({ is_active: status === "approved" })
+      .eq("id", id);
+
+    // Best-effort: update approval_status (column may not exist on older tables)
+    await admin
+      .from(table)
+      .update({ approval_status: status })
+      .eq("id", id);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("[admin api] POST error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  const admin = serviceClient();
-
-  // Update is_active first (always works)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin.from(table) as any)
-    .update({ is_active: status === "approved" })
-    .eq("id", id);
-
-  // Update approval_status (best-effort — column may not exist on older tables)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin.from(table) as any)
-    .update({ approval_status: status })
-    .eq("id", id);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ success: true });
 }

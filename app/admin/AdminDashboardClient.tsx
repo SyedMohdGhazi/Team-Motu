@@ -150,11 +150,26 @@ export default function AdminDashboardClient({ adminEmail }: { adminEmail: strin
   const router = useRouter();
   const { toast } = useToast();
 
+  async function getAuthHeader(): Promise<Record<string, string>> {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ? { "Authorization": `Bearer ${session.access_token}` } : {};
+  }
+
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const res = await fetch("/api/admin/vendors");
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      toast({ title: "Not authenticated", description: "Please sign in again.", variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+    const res = await fetch("/api/admin/vendors", {
+      headers: { "Authorization": `Bearer ${token}` },
+    });
     if (!res.ok) {
-      toast({ title: "Failed to load data", description: "Check your connection and try again.", variant: "destructive" });
+      const json = await res.json().catch(() => ({}));
+      toast({ title: "Failed to load data", description: json.error ?? `Error ${res.status}`, variant: "destructive" });
       setLoading(false);
       return;
     }
@@ -168,9 +183,10 @@ export default function AdminDashboardClient({ adminEmail }: { adminEmail: strin
 
   async function setStatus(table: TableKey, id: string, status: "approved" | "rejected") {
     setProcessing(id);
+    const authHeader = await getAuthHeader();
     const res = await fetch("/api/admin/vendors", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeader },
       body: JSON.stringify({ table, id, status }),
     });
     const json = await res.json();
