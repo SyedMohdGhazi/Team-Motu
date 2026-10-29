@@ -178,9 +178,15 @@ export default function AdminDashboardClient({ adminEmail }: { adminEmail: strin
 
   async function setStatus(table: TableKey, id: string, status: "approved" | "rejected") {
     setProcessing(id);
+    // Update is_active first — this column always exists
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from(table) as any)
-      .update({ approval_status: status, is_active: status === "approved" })
+      .update({ is_active: status === "approved" })
+      .eq("id", id);
+    // Best-effort: update approval_status (column may not exist yet on older tables)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from(table) as any)
+      .update({ approval_status: status })
       .eq("id", id);
     setProcessing(null);
     if (error) {

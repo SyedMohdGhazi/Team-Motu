@@ -38,24 +38,28 @@ export default function VendorLoginPage() {
       .eq("id", data.user.id)
       .single();
 
-    if (profile?.role === "customer") {
-      toast({
-        title: "Not a vendor account",
-        description: "This portal is for vendors only. Please use the main login or register as a vendor.",
-        variant: "destructive",
-      });
-      await supabase.auth.signOut();
-      setLoading(false);
+    const role = profile?.role;
+
+    if (role === "admin") {
+      router.push("/admin");
+      router.refresh();
       return;
     }
 
-    // admin gets their own portal, vendor goes to vendor dashboard
-    if (profile?.role === "admin") {
-      router.push("/admin");
-    } else {
+    if (role === "vendor") {
       router.push("/vendor/dashboard");
+      router.refresh();
+      return;
     }
-    router.refresh();
+
+    // customer or no profile — block
+    toast({
+      title: "Not a vendor account",
+      description: "This portal is for vendors only. Please use the main login or register as a vendor.",
+      variant: "destructive",
+    });
+    await supabase.auth.signOut();
+    setLoading(false);
   }
 
   return (
