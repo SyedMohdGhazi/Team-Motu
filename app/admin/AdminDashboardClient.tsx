@@ -30,7 +30,6 @@ interface VendorRow {
   approval_status: ApprovalStatus;
   created_at: string;
   user_id: string;
-  users?: { email: string } | null;
 }
 
 interface AdminUser {
@@ -157,9 +156,10 @@ export default function AdminDashboardClient({ adminEmail }: { adminEmail: strin
       Promise.all(
         VENDOR_TABS.map(async ({ key }) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: rows } = await (supabase.from(key) as any)
-            .select("*, users(email)")
+          const { data: rows, error } = await (supabase.from(key) as any)
+            .select("*")
             .order("created_at", { ascending: false });
+          if (error) console.error(`[admin] ${key} query failed:`, error.message);
           return [key, rows ?? []] as [TableKey, VendorRow[]];
         })
       ),
@@ -318,7 +318,7 @@ export default function AdminDashboardClient({ adminEmail }: { adminEmail: strin
                         const displayName =
                           (row as unknown as Record<string, unknown>)[nameField] as string | null
                           ?? row.email ?? "—";
-                        const ownerEmail = row.users?.email ?? row.email ?? "—";
+                        const ownerEmail = row.email ?? row.phone ?? "—";
                         const st = STATUS_CHIP[row.approval_status] ?? STATUS_CHIP.pending;
                         const isPending = row.approval_status === "pending";
                         return (
