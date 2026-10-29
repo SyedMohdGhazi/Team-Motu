@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import {
   ShieldCheck, LogOut, CheckCircle2, XCircle, Clock,
-  Scissors, ShoppingBag, Heart, PawPrint, Loader2, RefreshCw,
-  UserPlus, Users, X,
+  Scissors, PawPrint, Loader2, RefreshCw,
+  UserPlus, Users, X, ChevronDown, Mail, Phone, MapPin,
+  Calendar, Hash, FileText, Dog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,13 +22,16 @@ type ApprovalStatus = "pending" | "approved" | "rejected";
 interface VendorRow {
   id: string;
   business_name?: string;
-  store_name?: string;
-  name?: string;
   full_name?: string;
   email: string | null;
   phone: string | null;
   city: string | null;
   address: string | null;
+  description?: string | null;
+  bio?: string | null;
+  service_area?: string | null;
+  pet_types?: string | null;
+  website_url?: string | null;
   approval_status: ApprovalStatus;
   created_at: string;
   user_id: string;
@@ -51,13 +55,28 @@ function formatDate(d: string) {
 }
 
 const VENDOR_TABS = [
-  { key: "grooming_vendors", label: "Grooming",    icon: Scissors,    nameField: "business_name" },
-  { key: "medical_stores",   label: "Med Stores",  icon: ShoppingBag, nameField: "store_name" },
-  { key: "shelters",         label: "Shelters",    icon: Heart,       nameField: "name" },
-  { key: "pet_walkers",      label: "Pet Walkers", icon: PawPrint,    nameField: "full_name" },
+  { key: "grooming_vendors", label: "Grooming",    icon: Scissors, nameField: "business_name" },
+  { key: "pet_walkers",      label: "Pet Walkers", icon: PawPrint, nameField: "full_name" },
 ] as const;
 
 type TableKey = (typeof VENDOR_TABS)[number]["key"];
+
+function DetailRow({ icon: Icon, label, value, href }: {
+  icon: React.ElementType; label: string; value: string | null | undefined; href?: string;
+}) {
+  if (!value) return null;
+  return (
+    <div className="flex items-start gap-2.5 text-xs">
+      <Icon className="h-3.5 w-3.5 text-zinc-500 mt-0.5 shrink-0" />
+      <span className="text-zinc-500 w-20 shrink-0">{label}</span>
+      {href ? (
+        <a href={href} className="text-zinc-300 hover:text-white underline underline-offset-2 break-all">{value}</a>
+      ) : (
+        <span className="text-zinc-300 break-all">{value}</span>
+      )}
+    </div>
+  );
+}
 
 function AddAdminDialog({ open, onClose, onAdded }: {
   open: boolean; onClose: () => void; onAdded: () => void;
@@ -120,11 +139,7 @@ function AddAdminDialog({ open, onClose, onAdded }: {
             <p className="text-xs text-zinc-600">The new admin can change this after logging in.</p>
           </div>
           <div className="flex gap-2 pt-1">
-            <Button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
-            >
+            <Button type="submit" disabled={loading} className="flex-1 bg-zinc-100 text-zinc-900 hover:bg-zinc-200">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
               Create admin
             </Button>
@@ -148,6 +163,7 @@ interface Props {
 export default function AdminDashboardClient({ adminEmail, initialData, initialAdmins, configError }: Props) {
   const [filter, setFilter] = useState<"all" | ApprovalStatus>("all");
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [addAdminOpen, setAddAdminOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const supabase = createClient();
@@ -183,11 +199,8 @@ export default function AdminDashboardClient({ adminEmail, initialData, initialA
     sum + data[key].filter((r) => r.approval_status === "pending").length, 0
   );
 
-  const isLoading = isPending;
-
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      {/* Top bar */}
       <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-50">
         <div className="flex h-14 items-center justify-between px-6">
           <div className="flex items-center gap-2.5">
@@ -203,10 +216,10 @@ export default function AdminDashboardClient({ adminEmail, initialData, initialA
             <span className="text-xs text-zinc-500 hidden sm:inline">{adminEmail}</span>
             <button
               onClick={refresh}
-              disabled={isLoading}
+              disabled={isPending}
               className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-50"
             >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`} />
             </button>
             <button
               onClick={handleSignOut}
@@ -224,19 +237,16 @@ export default function AdminDashboardClient({ adminEmail, initialData, initialA
             <strong>Configuration error:</strong> {configError}
           </div>
         )}
+
         {/* Stats row */}
         <div className="grid grid-cols-4 gap-3 mb-8">
           <button
             onClick={() => setFilter("all")}
             className={`rounded-xl border p-4 text-left transition-colors ${
-              filter === "all"
-                ? "border-zinc-500/50 bg-zinc-800"
-                : "border-zinc-800 bg-zinc-900 hover:border-zinc-700"
+              filter === "all" ? "border-zinc-500/50 bg-zinc-800" : "border-zinc-800 bg-zinc-900 hover:border-zinc-700"
             }`}
           >
-            <p className="text-2xl font-bold">
-              {VENDOR_TABS.reduce((s, { key }) => s + data[key].length, 0)}
-            </p>
+            <p className="text-2xl font-bold">{VENDOR_TABS.reduce((s, { key }) => s + data[key].length, 0)}</p>
             <p className="text-xs text-zinc-400 mt-0.5">All</p>
           </button>
           {(["pending", "approved", "rejected"] as const).map((s) => {
@@ -287,9 +297,7 @@ export default function AdminDashboardClient({ adminEmail, initialData, initialA
               className="data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100 text-zinc-400 gap-1.5 ml-auto"
             >
               <Users className="h-3.5 w-3.5" /> Admins
-              <span className="rounded-full bg-zinc-700 text-zinc-300 text-xs px-1.5 py-px">
-                {admins.length}
-              </span>
+              <span className="rounded-full bg-zinc-700 text-zinc-300 text-xs px-1.5 py-px">{admins.length}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -301,73 +309,91 @@ export default function AdminDashboardClient({ adminEmail, initialData, initialA
               <TabsContent key={key} value={key}>
                 {rows.length === 0 ? (
                   <div className="py-16 text-center text-zinc-500">
-                    <p>No {filter === "all" ? "" : filter} entries for this category.</p>
+                    No {filter === "all" ? "" : filter} entries.
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
                     {rows.map((row) => {
                       const displayName =
-                        (row as unknown as Record<string, unknown>)[nameField] as string | null
-                        ?? row.email ?? "—";
-                      const ownerEmail = row.email ?? row.phone ?? "—";
+                        (row as unknown as Record<string, unknown>)[nameField] as string | null ?? "—";
                       const st = STATUS_CHIP[row.approval_status] ?? STATUS_CHIP.pending;
                       const isPendingRow = row.approval_status === "pending";
                       const isProcessing = processingId === row.id;
+                      const isExpanded = expandedId === row.id;
+
                       return (
-                        <div
-                          key={row.id}
-                          className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 flex flex-col sm:flex-row sm:items-center gap-4"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-semibold text-zinc-100 truncate">{displayName}</p>
-                              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold shrink-0 ${st.cls}`}>
-                                {st.label}
-                              </span>
+                        <div key={row.id} className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
+                          {/* Collapsed row — click to expand */}
+                          <button
+                            type="button"
+                            onClick={() => setExpandedId(isExpanded ? null : row.id)}
+                            className="w-full p-4 flex items-center gap-3 text-left hover:bg-zinc-800/50 transition-colors"
+                          >
+                            <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-semibold text-zinc-100 truncate">{displayName}</p>
+                                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold shrink-0 ${st.cls}`}>
+                                  {st.label}
+                                </span>
+                              </div>
+                              <p className="text-xs text-zinc-500 mt-0.5 flex items-center gap-3">
+                                {row.email && <span>{row.email}</span>}
+                                {row.city && <span>{row.city}</span>}
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" /> {formatDate(row.created_at)}
+                                </span>
+                              </p>
                             </div>
-                            <p className="text-xs text-zinc-500">{ownerEmail}</p>
-                            <div className="flex items-center gap-3 mt-1.5 text-xs text-zinc-600">
-                              {row.city && <span>{row.city}</span>}
-                              {row.phone && <span>{row.phone}</span>}
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" /> {formatDate(row.created_at)}
-                              </span>
+                            {/* Action buttons — stop propagation so click doesn't toggle expand */}
+                            <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              {isPendingRow ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    disabled={isProcessing}
+                                    onClick={() => setStatus(key, row.id, "approved")}
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5"
+                                  >
+                                    {isProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={isProcessing}
+                                    onClick={() => setStatus(key, row.id, "rejected")}
+                                    className="border-red-500/40 text-red-400 hover:bg-red-500/10 gap-1.5"
+                                  >
+                                    <XCircle className="h-3.5 w-3.5" /> Reject
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={isProcessing}
+                                  onClick={() => setStatus(key, row.id, row.approval_status === "approved" ? "rejected" : "approved")}
+                                  className="text-zinc-500 hover:text-zinc-300 text-xs"
+                                >
+                                  {row.approval_status === "approved" ? "Revoke" : "Re-approve"}
+                                </Button>
+                              )}
                             </div>
-                          </div>
-                          {isPendingRow && (
-                            <div className="flex items-center gap-2 shrink-0">
-                              <Button
-                                size="sm"
-                                disabled={isProcessing}
-                                onClick={() => setStatus(key, row.id, "approved")}
-                                className="bg-emerald-600 hover:bg-emerald-500 text-white gap-1.5"
-                              >
-                                {isProcessing
-                                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  : <CheckCircle2 className="h-3.5 w-3.5" />}
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={isProcessing}
-                                onClick={() => setStatus(key, row.id, "rejected")}
-                                className="border-red-500/40 text-red-400 hover:bg-red-500/10 gap-1.5"
-                              >
-                                <XCircle className="h-3.5 w-3.5" /> Reject
-                              </Button>
+                          </button>
+
+                          {/* Expanded detail panel */}
+                          {isExpanded && (
+                            <div className="border-t border-zinc-800 px-4 py-4 bg-zinc-950 grid gap-2.5">
+                              <DetailRow icon={Mail}     label="Email"        value={row.email}        href={row.email ? `mailto:${row.email}` : undefined} />
+                              <DetailRow icon={Phone}    label="Phone"        value={row.phone}        href={row.phone ? `tel:${row.phone}` : undefined} />
+                              <DetailRow icon={MapPin}   label="Address"      value={[row.address, row.city].filter(Boolean).join(", ")} />
+                              <DetailRow icon={Dog}      label="Pet types"    value={row.pet_types} />
+                              <DetailRow icon={MapPin}   label="Service area" value={row.service_area} />
+                              <DetailRow icon={FileText} label="Description"  value={row.description ?? row.bio} />
+                              <DetailRow icon={Calendar} label="Registered"   value={formatDate(row.created_at)} />
+                              <DetailRow icon={Hash}     label="User ID"      value={row.user_id} />
                             </div>
-                          )}
-                          {!isPendingRow && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={isProcessing}
-                              onClick={() => setStatus(key, row.id, row.approval_status === "approved" ? "rejected" : "approved")}
-                              className="text-zinc-500 hover:text-zinc-300 shrink-0 text-xs"
-                            >
-                              {row.approval_status === "approved" ? "Revoke" : "Re-approve"}
-                            </Button>
                           )}
                         </div>
                       );
@@ -381,29 +407,20 @@ export default function AdminDashboardClient({ adminEmail, initialData, initialA
           <TabsContent value="admins">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-zinc-400">{admins.length} admin account{admins.length !== 1 ? "s" : ""}</p>
-              <Button
-                size="sm"
-                onClick={() => setAddAdminOpen(true)}
-                className="bg-zinc-100 text-zinc-900 hover:bg-zinc-200 gap-1.5"
-              >
+              <Button size="sm" onClick={() => setAddAdminOpen(true)} className="bg-zinc-100 text-zinc-900 hover:bg-zinc-200 gap-1.5">
                 <UserPlus className="h-4 w-4" /> Add Admin
               </Button>
             </div>
             <div className="flex flex-col gap-2">
               {admins.map((a) => (
-                <div
-                  key={a.id}
-                  className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 flex items-center gap-4"
-                >
+                <div key={a.id} className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 flex items-center gap-4">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800 shrink-0">
                     <ShieldCheck className="h-4 w-4 text-zinc-400" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-zinc-100 text-sm">
                       {a.full_name ?? a.email}
-                      {a.email === adminEmail && (
-                        <span className="ml-2 text-xs text-zinc-500">(you)</span>
-                      )}
+                      {a.email === adminEmail && <span className="ml-2 text-xs text-zinc-500">(you)</span>}
                     </p>
                     {a.full_name && <p className="text-xs text-zinc-500">{a.email}</p>}
                   </div>
@@ -415,11 +432,7 @@ export default function AdminDashboardClient({ adminEmail, initialData, initialA
         </Tabs>
       </main>
 
-      <AddAdminDialog
-        open={addAdminOpen}
-        onClose={() => setAddAdminOpen(false)}
-        onAdded={refresh}
-      />
+      <AddAdminDialog open={addAdminOpen} onClose={() => setAddAdminOpen(false)} onAdded={refresh} />
     </div>
   );
 }

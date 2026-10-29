@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as serviceRole } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
-const TABLES = ["grooming_vendors", "medical_stores", "shelters", "pet_walkers"] as const;
+const TABLES = ["grooming_vendors", "pet_walkers"] as const;
 type TableKey = (typeof TABLES)[number];
 
 function adminClient() {
@@ -41,10 +41,8 @@ export async function loadAllVendors() {
   await assertAdmin();
   const admin = adminClient();
 
-  const [gv, ms, sh, pw, admins] = await Promise.all([
+  const [gv, pw, admins] = await Promise.all([
     admin.from("grooming_vendors").select("*").order("created_at", { ascending: false }),
-    admin.from("medical_stores").select("*").order("created_at", { ascending: false }),
-    admin.from("shelters").select("*").order("created_at", { ascending: false }),
     admin.from("pet_walkers").select("*").order("created_at", { ascending: false }),
     admin.from("users").select("id, email, full_name, created_at")
       .eq("role", "admin").order("created_at", { ascending: true }),
@@ -53,8 +51,6 @@ export async function loadAllVendors() {
   return {
     vendors: {
       grooming_vendors: gv.data ?? [],
-      medical_stores: ms.data ?? [],
-      shelters: sh.data ?? [],
       pet_walkers: pw.data ?? [],
     },
     admins: admins.data ?? [],

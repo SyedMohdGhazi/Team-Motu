@@ -16,7 +16,7 @@ export default async function AdminPage() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-  const empty = { grooming_vendors: [], medical_stores: [], shelters: [], pet_walkers: [] };
+  const empty = { grooming_vendors: [], pet_walkers: [] };
 
   if (!serviceKey || !supabaseUrl) {
     console.error("[admin] SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL is not set in environment variables.");
@@ -35,10 +35,8 @@ export default async function AdminPage() {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const [gv, ms, sh, pw, admins] = await Promise.all([
+    const [gv, pw, admins] = await Promise.all([
       admin.from("grooming_vendors").select("*").order("created_at", { ascending: false }),
-      admin.from("medical_stores").select("*").order("created_at", { ascending: false }),
-      admin.from("shelters").select("*").order("created_at", { ascending: false }),
       admin.from("pet_walkers").select("*").order("created_at", { ascending: false }),
       admin.from("users").select("id, email, full_name, created_at")
         .eq("role", "admin").order("created_at", { ascending: true }),
@@ -46,8 +44,6 @@ export default async function AdminPage() {
 
     const initialData = {
       grooming_vendors: (gv.data ?? []) as object[],
-      medical_stores:   (ms.data ?? []) as object[],
-      shelters:         (sh.data ?? []) as object[],
       pet_walkers:      (pw.data ?? []) as object[],
     };
 

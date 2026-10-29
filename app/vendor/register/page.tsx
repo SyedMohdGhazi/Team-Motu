@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -9,20 +9,57 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Store } from "lucide-react";
+import { Store, Loader2, AlertCircle } from "lucide-react";
+import { checkEmailIsCustomer } from "./actions";
 
 export default function VendorRegisterPage() {
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [blocked, setBlocked] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const supabase = createClient();
 
+  useEffect(() => {
+    async function checkSession() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: profile } = await (supabase.from("users") as any)
+          .select("role").eq("id", user.id).single();
+        if (profile?.role === "vendor") {
+          router.push("/vendor/dashboard");
+          return;
+        }
+        if (profile?.role === "customer") {
+          setBlocked(true);
+          setChecking(false);
+          return;
+        }
+      }
+      setChecking(false);
+    }
+    checkSession();
+  }, []);
+
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+
+    // Block if this email is already a customer account
+    const isCustomerEmail = await checkEmailIsCustomer(email);
+    if (isCustomerEmail) {
+      setLoading(false);
+      toast({
+        title: "Email already registered as customer",
+        description: "This email belongs to a customer account and cannot be used to register as a vendor. Please use a different email address.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -46,6 +83,33 @@ export default function VendorRegisterPage() {
       });
       router.push("/vendor/login");
     }
+  }
+
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (blocked) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-primary/10 to-background px-4">
+        <div className="w-full max-w-sm rounded-2xl border border-destructive/40 bg-destructive/10 p-6 text-center">
+          <AlertCircle className="mx-auto h-10 w-10 text-destructive mb-3" />
+          <h2 className="font-bold text-lg mb-1">Customer account detected</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            You&apos;re signed in with a customer account. Customer emails cannot be used to register as a vendor — vendor accounts require a separate email address.
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard">Back to my dashboard</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

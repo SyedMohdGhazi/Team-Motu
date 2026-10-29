@@ -27,8 +27,6 @@ const tiles = [
     description:
       "Book professional groomers for baths, haircuts, nail trims, and full spa packages — doorstep visits or a salon appointment, your choice.",
     href: "/grooming",
-    registerHref: "/vendor/dashboard",
-    registerLabel: "Register your salon",
     countKey: "vendors" as const,
     color: "from-violet-500 to-purple-400",
     bgGlow: "from-violet-500/20 via-purple-400/10 to-transparent",
@@ -41,8 +39,6 @@ const tiles = [
     description:
       "Too busy for a walk? Book a certified pet walker for your dog or cat — scheduled daily walks, solo or group, right in your neighbourhood.",
     href: "/pet-walking",
-    registerHref: "/pet-walking/register",
-    registerLabel: "Register as a walker",
     countKey: "walkers" as const,
     color: "from-amber-500 to-orange-400",
     bgGlow: "from-amber-500/20 via-orange-400/10 to-transparent",
@@ -95,7 +91,7 @@ export default async function HomePage() {
 
         {/* Service Tiles */}
         <section className="container mx-auto grid grid-cols-1 gap-5 px-4 pb-16 pt-10 sm:grid-cols-2">
-          {tiles.map(({ emoji, fullTitle, subtitle, description, href, registerHref, registerLabel, countKey, color, bgGlow, badges }) => {
+          {tiles.map(({ emoji, fullTitle, subtitle, description, href, countKey, color, bgGlow, badges }) => {
             const count = allCounts[countKey];
             return (
               <div
@@ -138,11 +134,6 @@ export default async function HomePage() {
                   </div>
 
                   <div className="mt-auto pt-4 border-t border-border/40 flex items-center justify-between gap-2">
-                    {count === 0 && (
-                      <Link href={registerHref} className="text-xs text-primary hover:underline font-medium">
-                        {registerLabel} →
-                      </Link>
-                    )}
                     {count > 0 && (
                       <span className="text-xs text-muted-foreground">
                         <strong className="text-foreground">{count}</strong> listed near you
@@ -162,12 +153,6 @@ export default async function HomePage() {
           })}
         </section>
 
-        <div className="pb-10 text-center text-xs text-muted-foreground">
-          Are you a groomer or pet walker?{" "}
-          <Link href="/vendor/register" className="text-primary hover:underline font-medium">
-            Join as a vendor →
-          </Link>
-        </div>
       </main>
     </>
   );
