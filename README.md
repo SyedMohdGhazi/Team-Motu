@@ -4,7 +4,7 @@
 
 # Team Motu
 
-**All-in-one pet services platform for Dehradun, Uttarakhand**
+**Pet grooming & daily walks in Dehradun — simple, trusted, local**
 
 [![Live](https://img.shields.io/badge/Live%20at-team--motu.vercel.app-7c3aed?style=for-the-badge&logo=vercel)](https://team-motu.vercel.app)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
@@ -17,36 +17,33 @@
 
 ## What is Team Motu?
 
-Team Motu connects pet owners in Dehradun with trusted local services — all in one place, with a clean mobile-first experience and PWA support for home-screen installs.
+Team Motu helps pet owners in Dehradun find and book trusted grooming and walking services — with a clean mobile-first experience and PWA support for home-screen installs.
 
 | Service | Description |
 |---|---|
-| 🏥 **Veterinary Clinics & Hospitals** | Book home visits or in-clinic appointments with certified vets |
-| ✂️ **Grooming Spas & Salons** | Schedule at-home or salon grooming sessions |
-| 🛍️ **Medical Supplies, Food & Toys** | Browse trusted local pet stores |
-| 🐾 **Foster Homes & Daycare** | Find trusted shelters, foster homes, and daycare centres for your pet |
-| 🦮 **Daily Walkies** | Book certified pet walkers for solo or group walks |
+| ✂️ **Grooming Spas & Salons** | Book at-home or salon grooming — baths, haircuts, nail trims & more |
+| 🦮 **Daily Walkies** | Book certified pet walkers for solo or group walks near you |
 
 ---
 
 ## Features
 
 ### For Customers
-- Browse all services without signing in
-- Book grooming appointments with a 3-step flow (date/time → pet details → confirm)
-- View booking history with live status updates (Pending / Accepted / Rejected / Completed)
+- Browse groomers and walkers without signing in
+- Book grooming appointments — pick a date, add pet details, confirm
+- View booking history with live status (Pending / Accepted / Rejected / Completed)
 
 ### For Vendors
 - Separate vendor registration and login portal
-- Dashboard to manage bookings, add services, and update business profile
-- Real-time approval status banner (Under Review → Live → Rejected)
+- Dashboard to manage bookings and update your profile
+- Listings only go live after admin approval
 - Vendors cannot book their own services
 
 ### Platform
-- **Role-based auth** — customer, vendor, and admin roles with separate portals
-- **Admin approval** — vendors only go live after admin approval
-- **PWA** — installable on Android/iOS home screen, cache-first offline support
-- **Dark / light mode** — system-aware theme toggle
+- **Role-based auth** — customer, vendor, and admin roles
+- **Admin approval** — every vendor is reviewed before going live
+- **PWA** — installable on Android/iOS, works offline
+- **Dark / light mode** — follows system preference
 
 ---
 
@@ -58,7 +55,7 @@ Team Motu connects pet owners in Dehradun with trusted local services — all in
 | Language | TypeScript (strict mode) |
 | Database | Supabase (PostgreSQL + Row Level Security) |
 | Auth | Supabase Auth (email/password, role-based) |
-| Storage | Supabase Storage (pet photo uploads) |
+| Storage | Supabase Storage |
 | UI | Tailwind CSS + shadcn/ui |
 | Deployment | Vercel (auto-deploy on push) |
 
@@ -100,7 +97,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Database
 
-Run the SQL migrations in order from `supabase/migrations/` in the Supabase SQL Editor to create all required tables and RLS policies.
+Run the SQL migrations in order from `supabase/migrations/` in the Supabase SQL Editor.
 
 ---
 
@@ -112,20 +109,17 @@ app/
 ├── vendor/           # Vendor login, register, dashboard
 ├── dashboard/        # Customer dashboard & booking history
 ├── grooming/         # Grooming listings & booking flow
-├── shelters/         # Shelter & foster homes directory
-├── medical-store/    # Medical store listings
-├── veterinary/       # Veterinary clinics (coming soon)
 ├── pet-walking/      # Pet walker listings & registration
-├── api/              # Secure API routes (service-role operations)
+├── api/              # Secure API routes
 └── manifest.ts       # PWA manifest
 
 components/
 ├── navbar.tsx        # Role-aware navigation
-├── install-banner.tsx # PWA install prompt
+├── home-bg.tsx       # Animated homepage background
+├── install-banner.tsx
 └── ui/               # shadcn/ui components
 
 lib/supabase/         # Browser, server, and middleware clients
-types/                # Manual Supabase type definitions
 supabase/migrations/  # SQL migration files
 public/
 ├── sw.js             # Service worker
@@ -137,10 +131,12 @@ public/
 ## Roadmap
 
 - [ ] Veterinary clinic listings & booking
+- [ ] Pet supplies & medical store listings
+- [ ] Foster homes & daycare directory
 - [ ] Pet walker live tracking
-- [ ] In-app notifications for booking status changes
+- [ ] In-app notifications
 - [ ] Payment integration (Razorpay)
-- [ ] Ratings & reviews for vendors
+- [ ] Ratings & reviews
 - [ ] Multi-city expansion
 
 ---
