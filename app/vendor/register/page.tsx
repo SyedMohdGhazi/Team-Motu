@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Store, Loader2, AlertCircle } from "lucide-react";
-import { checkEmailIsCustomer } from "./actions";
+import { checkEmailIsCustomer, checkEmailIsVendor } from "./actions";
 
 export default function VendorRegisterPage() {
   const [businessName, setBusinessName] = useState("");
@@ -58,6 +58,19 @@ export default function VendorRegisterPage() {
         description: "This email belongs to a customer account and cannot be used to register as a vendor. Please use a different email address.",
         variant: "destructive",
       });
+      return;
+    }
+
+    // Block if this email is already a vendor account
+    const isVendorEmail = await checkEmailIsVendor(email);
+    if (isVendorEmail) {
+      setLoading(false);
+      toast({
+        title: "Already registered as a vendor",
+        description: "This email already has a vendor account. Please sign in at the vendor login page.",
+        variant: "destructive",
+      });
+      router.push("/vendor/login");
       return;
     }
 
