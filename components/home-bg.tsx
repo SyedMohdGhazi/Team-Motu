@@ -28,7 +28,7 @@ export function HomeBg() {
       const my = e.clientY / window.innerHeight - 0.5;
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        els.forEach((el) => {
+        els?.forEach((el) => {
           const px = parseFloat(el.dataset.px ?? "40");
           el.style.transform = `translate(${mx * px}px, ${my * px}px)`;
         });
