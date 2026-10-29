@@ -142,9 +142,10 @@ interface Props {
   adminEmail: string;
   initialData: Record<TableKey, VendorRow[]>;
   initialAdmins: AdminUser[];
+  configError?: string;
 }
 
-export default function AdminDashboardClient({ adminEmail, initialData, initialAdmins }: Props) {
+export default function AdminDashboardClient({ adminEmail, initialData, initialAdmins, configError }: Props) {
   const [filter, setFilter] = useState<"all" | ApprovalStatus>("all");
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [addAdminOpen, setAddAdminOpen] = useState(false);
@@ -218,6 +219,11 @@ export default function AdminDashboardClient({ adminEmail, initialData, initialA
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
+        {configError && (
+          <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-400">
+            <strong>Configuration error:</strong> {configError}
+          </div>
+        )}
         {/* Stats row */}
         <div className="grid grid-cols-4 gap-3 mb-8">
           <button
