@@ -5,29 +5,29 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 
-interface PetForm {
+interface UserPet {
+  id: string;
   name: string;
   type: string;
-  breed: string;
-  age_years: string;
-  notes: string;
+  breed: string | null;
+  age_years: number | null;
+  gender: string | null;
+  weight_kg: number | null;
 }
 
-const EMPTY: PetForm = { name: "", type: "", breed: "", age_years: "", notes: "" };
+const PET_EMOJI: Record<string, string> = {
+  dog: "🐶", cat: "🐱", rabbit: "🐰", bird: "🐦", other: "🐾",
+};
 
-export default function MyPetPage() {
-  const [form, setForm] = useState<PetForm>(EMPTY);
-  const [petId, setPetId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [initializing, setInitializing] = useState(true);
+export default function MyPetsPage() {
+  const [pets, setPets] = useState<UserPet[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
   const supabase = createClient();
@@ -39,65 +39,33 @@ export default function MyPetPage() {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase.from("user_pets") as any)
-        .select("*")
+        .select("id, name, type, breed, age_years, gender, weight_kg")
         .eq("user_id", user.id)
-        .maybeSingle();
+        .order("created_at", { ascending: true });
 
-      if (data) {
-        setPetId(data.id);
-        setForm({
-          name: data.name ?? "",
-          type: data.type ?? "",
-          breed: data.breed ?? "",
-          age_years: data.age_years?.toString() ?? "",
-          notes: data.notes ?? "",
-        });
-      }
-      setInitializing(false);
+      setPets((data as UserPet[]) ?? []);
+      setLoading(false);
     }
     load();
   }, []);
 
-  function update(field: keyof PetForm, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
-  }
+  async function deletePet(pet: UserPet) {
+    if (!confirm(`Remove ${pet.name}? This cannot be undone.`)) return;
+    setDeletingId(pet.id);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
-
-    const payload = {
-      user_id: user.id,
-      name: form.name,
-      type: form.type,
-      breed: form.breed || null,
-      age_years: form.age_years ? parseFloat(form.age_years) : null,
-      notes: form.notes || null,
-    };
-
-    let error;
-    if (petId) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ({ error } = await (supabase.from("user_pets") as any).update(payload).eq("id", petId));
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ({ error } = await (supabase.from("user_pets") as any).insert(payload));
-    }
-
-    setLoading(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("user_pets") as any).delete().eq("id", pet.id);
 
     if (error) {
-      toast({ title: "Failed to save", description: error.message, variant: "destructive" });
+      toast({ title: "Could not remove pet", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: petId ? "Pet updated!" : "Pet added!", description: `${form.name}'s profile is saved.` });
-      router.push("/dashboard");
+      setPets((prev) => prev.filter((p) => p.id !== pet.id));
+      toast({ title: `${pet.name} removed` });
     }
+    setDeletingId(null);
   }
 
-  if (initializing) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -109,88 +77,85 @@ export default function MyPetPage() {
     <>
       <Navbar />
       <main className="container mx-auto max-w-md px-4 py-8">
-        <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
           <ArrowLeft className="h-4 w-4" /> Back to dashboard
         </Link>
 
-        <h1 className="text-2xl font-bold mb-1">{petId ? "Edit pet details" : "Add your pet"}</h1>
-        <p className="text-sm text-muted-foreground mb-6">Your pet&apos;s profile is private — only you can see it.</p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">My Pets</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {pets.length === 0 ? "No pets added yet" : `${pets.length} pet${pets.length > 1 ? "s" : ""}`}
+            </p>
+          </div>
+          <Link href="/pet/new">
+            <Button size="sm" className="gap-1.5">
+              <Plus className="h-4 w-4" /> Add pet
+            </Button>
+          </Link>
+        </div>
 
-        <form onSubmit={handleSubmit}>
-          <Card>
-            <CardHeader><CardTitle className="text-base">Pet info</CardTitle></CardHeader>
-            <CardContent className="grid gap-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1.5">
-                  <Label>Name *</Label>
-                  <Input
-                    placeholder="e.g. Bruno"
-                    value={form.name}
-                    onChange={(e) => update("name", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label>Type *</Label>
-                  <Select value={form.type} onValueChange={(v) => update("type", v)} required>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="dog">🐶 Dog</SelectItem>
-                      <SelectItem value="cat">🐱 Cat</SelectItem>
-                      <SelectItem value="rabbit">🐰 Rabbit</SelectItem>
-                      <SelectItem value="bird">🐦 Bird</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+        {pets.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center py-12 gap-4 text-center">
+              <span className="text-5xl">🐾</span>
+              <div>
+                <p className="font-semibold">No pets yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Add your pet to personalise your experience</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1.5">
-                  <Label>Breed <span className="text-muted-foreground text-xs">(optional)</span></Label>
-                  <Input
-                    placeholder="e.g. Labrador"
-                    value={form.breed}
-                    onChange={(e) => update("breed", e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label>Age (years)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="30"
-                    step="0.5"
-                    placeholder="2"
-                    value={form.age_years}
-                    onChange={(e) => update("age_years", e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-1.5">
-                <Label>Notes <span className="text-muted-foreground text-xs">(optional)</span></Label>
-                <Input
-                  placeholder="e.g. allergic to wheat, loves playing fetch"
-                  value={form.notes}
-                  onChange={(e) => update("notes", e.target.value)}
-                />
-              </div>
+              <Link href="/pet/new">
+                <Button className="gap-1.5">
+                  <Plus className="h-4 w-4" /> Add your first pet
+                </Button>
+              </Link>
             </CardContent>
           </Card>
-
-          <Button
-            type="submit"
-            disabled={loading || !form.name || !form.type}
-            className="w-full mt-4"
-            size="lg"
-          >
-            {loading
-              ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving…</>
-              : <><Save className="h-4 w-4 mr-2" />{petId ? "Save changes" : "Add pet"}</>
-            }
-          </Button>
-        </form>
+        ) : (
+          <div className="grid gap-3">
+            {pets.map((pet) => (
+              <Card key={pet.id} className="group hover:shadow-md transition-shadow">
+                <CardContent className="flex items-center gap-4 py-4">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-[#62C995]/40 bg-[#62C995]/10 text-3xl">
+                    {PET_EMOJI[pet.type] ?? "🐾"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate">{pet.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {[
+                        pet.breed,
+                        pet.age_years != null ? `${pet.age_years}y` : null,
+                        pet.weight_kg != null ? `${pet.weight_kg} kg` : null,
+                        pet.gender && pet.gender !== "unknown" ? pet.gender : null,
+                      ].filter(Boolean).join(" · ") || pet.type}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link href={`/pet/${pet.id}`}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => deletePet(pet)}
+                      disabled={deletingId === pet.id}
+                    >
+                      {deletingId === pet.id
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <Trash2 className="h-4 w-4" />
+                      }
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </main>
     </>
   );

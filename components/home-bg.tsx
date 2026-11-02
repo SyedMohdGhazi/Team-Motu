@@ -56,17 +56,17 @@ export function HomeBg() {
       `}</style>
 
       <div ref={ref} aria-hidden className="fixed inset-0 -z-10 overflow-hidden pointer-events-none select-none">
-        {/* Ambient colour blobs */}
+        {/* Ambient colour blobs — Mint Green + Happy Orange palette */}
         <div
-          className="absolute -top-48 -left-48 h-[560px] w-[560px] rounded-full bg-violet-500/25 blur-[130px]"
+          className="absolute -top-48 -left-48 h-[560px] w-[560px] rounded-full bg-[#62C995]/20 blur-[130px]"
           style={{ animation: "blob-pulse 9s ease-in-out infinite" }}
         />
         <div
-          className="absolute -bottom-48 -right-48 h-[500px] w-[500px] rounded-full bg-pink-500/20 blur-[120px]"
+          className="absolute -bottom-48 -right-48 h-[500px] w-[500px] rounded-full bg-[#FFAA62]/18 blur-[120px]"
           style={{ animation: "blob-pulse 11s ease-in-out infinite 3.5s" }}
         />
         <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[420px] w-[420px] rounded-full bg-amber-400/15 blur-[110px]"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[420px] w-[420px] rounded-full bg-[#B8E8C9]/25 blur-[110px]"
           style={{ animation: "blob-pulse 13s ease-in-out infinite 7s" }}
         />
 
