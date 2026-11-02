@@ -7,15 +7,19 @@ import { HomeBg } from "@/components/home-bg";
 async function getLiveCounts() {
   try {
     const supabase = await createClient();
-    const [{ count: vendors }] = await Promise.all([
+    const [{ count: vendors }, { count: walkers }] = await Promise.all([
       supabase
         .from("grooming_vendors")
         .select("*", { count: "exact", head: true })
         .eq("is_active", true),
+      supabase
+        .from("pet_walkers")
+        .select("*", { count: "exact", head: true })
+        .eq("is_active", true),
     ]);
-    return { vendors: vendors ?? 0 };
+    return { vendors: vendors ?? 0, walkers: walkers ?? 0 };
   } catch {
-    return { vendors: 0 };
+    return { vendors: 0, walkers: 0 };
   }
 }
 
@@ -48,7 +52,6 @@ const tiles = [
 
 export default async function HomePage() {
   const counts = await getLiveCounts();
-  const allCounts = { ...counts, walkers: 0 };
 
   return (
     <>
@@ -92,7 +95,7 @@ export default async function HomePage() {
         {/* Service Tiles */}
         <section className="container mx-auto grid grid-cols-1 gap-5 px-4 pb-16 pt-10 sm:grid-cols-2">
           {tiles.map(({ emoji, fullTitle, subtitle, description, href, countKey, color, bgGlow, badges }) => {
-            const count = allCounts[countKey];
+            const count = counts[countKey];
             return (
               <div
                 key={fullTitle}

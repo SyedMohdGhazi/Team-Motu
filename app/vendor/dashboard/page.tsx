@@ -21,6 +21,7 @@ import { createClient } from "@/lib/supabase/client";
 const PLATFORM_COMMISSION_PCT = 15;
 
 type BookingStatus = "pending" | "confirmed" | "in_progress" | "completed" | "cancelled";
+type WalkStatus = "pending" | "confirmed" | "completed" | "cancelled";
 
 interface Booking {
   id: string;
@@ -34,6 +35,23 @@ interface Booking {
   notes: string | null;
   users?: { full_name: string | null; email: string };
   services?: { name: string };
+}
+
+interface WalkBooking {
+  id: string;
+  pet_name: string;
+  pet_type: string;
+  walk_date: string;
+  walk_time: string;
+  notes: string | null;
+  status: WalkStatus;
+  users?: { full_name: string | null; email: string };
+}
+
+interface WalkerProfile {
+  id: string;
+  full_name: string;
+  approval_status: string;
 }
 
 interface VendorProfile {
@@ -159,6 +177,8 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
 
 export default function VendorDashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [walkBookings, setWalkBookings] = useState<WalkBooking[]>([]);
+  const [walkerProfile, setWalkerProfile] = useState<WalkerProfile | null>(null);
   const [services, setServices] = useState<{ id: string; name: string; price: number; duration_minutes: number; pet_type: string; service_type: string }[]>([]);
   const [profile, setProfile] = useState<VendorProfile>({
     business_name: "", description: "", address: "", city: "Dehradun",
@@ -228,6 +248,25 @@ export default function VendorDashboardPage() {
         // Pre-fill email from auth
         setProfile((p) => ({ ...p, email: user.email ?? "" }));
       }
+
+      // Also check if this vendor is a registered pet walker
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: walkerData } = await (supabase.from("pet_walkers") as any)
+        .select("id, full_name, approval_status")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (walkerData) {
+        setWalkerProfile(walkerData as WalkerProfile);
+        if (walkerData.approval_status === "approved") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: wbData } = await (supabase.from("walker_bookings") as any)
+            .select("*, users(full_name, email)")
+            .eq("walker_id", walkerData.id)
+            .order("walk_date", { ascending: false });
+          setWalkBookings((wbData as WalkBooking[]) ?? []);
+        }
+      }
       setLoading(false);
     }
     loadData();
@@ -284,10 +323,22 @@ export default function VendorDashboardPage() {
     }
   }
 
+  async function updateWalkBookingStatus(id: string, status: WalkStatus) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("walker_bookings") as any).update({ status }).eq("id", id);
+    if (error) {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+    } else {
+      setWalkBookings((prev) => prev.map((b) => b.id === id ? { ...b, status } : b));
+      toast({ title: `Walk booking ${status}` });
+    }
+  }
+
   const completedBookings = bookings.filter((b) => b.status === "completed");
   const totalRevenue = completedBookings.reduce((s, b) => s + b.total_price, 0);
   const totalPayout = Math.round(totalRevenue * (1 - PLATFORM_COMMISSION_PCT / 100));
   const pendingCount = bookings.filter((b) => b.status === "pending").length;
+  const walkPendingCount = walkBookings.filter((b) => b.status === "pending").length;
 
   if (loading) {
     return (
@@ -378,6 +429,11 @@ export default function VendorDashboardPage() {
               Bookings {pendingCount > 0 && <span className="ml-1.5 rounded-full bg-primary text-primary-foreground text-xs px-1.5 py-0.5">{pendingCount}</span>}
             </TabsTrigger>
             <TabsTrigger value="services" className="flex-1">Services</TabsTrigger>
+            {walkerProfile && (
+              <TabsTrigger value="walk-requests" className="flex-1">
+                Walk Requests {walkPendingCount > 0 && <span className="ml-1.5 rounded-full bg-amber-500 text-white text-xs px-1.5 py-0.5">{walkPendingCount}</span>}
+              </TabsTrigger>
+            )}
             <TabsTrigger value="profile" className="flex-1">Business Profile</TabsTrigger>
           </TabsList>
 
@@ -471,6 +527,58 @@ export default function VendorDashboardPage() {
               </div>
             )}
           </TabsContent>
+
+          {/* Walk Requests — only shown for pet walkers */}
+          {walkerProfile && (
+            <TabsContent value="walk-requests" className="grid gap-3">
+              {walkerProfile.approval_status !== "approved" ? (
+                <div className="py-12 text-center text-muted-foreground">
+                  <p className="text-4xl mb-3">⏳</p>
+                  <p className="font-medium">Walker profile pending approval</p>
+                  <p className="text-sm mt-1">You&apos;ll see walk booking requests here once your walker profile is approved.</p>
+                </div>
+              ) : walkBookings.length === 0 ? (
+                <div className="py-16 text-center text-muted-foreground">
+                  <p className="text-4xl mb-3">🦮</p>
+                  <p className="font-medium">No walk requests yet</p>
+                  <p className="text-sm mt-1">Customers will book walks through your listing on the pet walking page.</p>
+                </div>
+              ) : (
+                walkBookings.map((b) => (
+                  <div key={b.id} className="rounded-xl border p-4 grid gap-3">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold">{b.users?.full_name ?? b.users?.email ?? "Customer"}</span>
+                          <span className={`text-xs font-medium rounded-full px-2 py-0.5 ${STATUS_STYLES[b.status as BookingStatus] ?? STATUS_STYLES.pending}`}>{b.status}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-0.5">{b.pet_name} ({b.pet_type})</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          <Clock className="h-3 w-3 inline mr-1" />{b.walk_date} at {b.walk_time}
+                        </p>
+                        {b.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">&quot;{b.notes}&quot;</p>}
+                      </div>
+                    </div>
+                    {b.status === "pending" && (
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50" onClick={() => updateWalkBookingStatus(b.id, "confirmed")}>
+                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Accept
+                        </Button>
+                        <Button size="sm" variant="outline" className="border-red-300 text-red-600 hover:bg-red-50" onClick={() => updateWalkBookingStatus(b.id, "cancelled")}>
+                          <XCircle className="h-3.5 w-3.5 mr-1" /> Reject
+                        </Button>
+                      </div>
+                    )}
+                    {b.status === "confirmed" && (
+                      <Button size="sm" variant="outline" className="w-fit border-blue-300 text-blue-700 hover:bg-blue-50" onClick={() => updateWalkBookingStatus(b.id, "completed")}>
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Mark completed
+                      </Button>
+                    )}
+                  </div>
+                ))
+              )}
+            </TabsContent>
+          )}
 
           {/* Profile */}
           <TabsContent value="profile">
