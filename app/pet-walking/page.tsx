@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,9 +13,21 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, MapPin, Loader2, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
+import {
+  ArrowLeft, MapPin, Loader2, ChevronLeft, ChevronRight, CheckCircle2, Tag,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
+
+interface VendorOffer {
+  id: string;
+  coupon_code: string;
+  title: string;
+  discount_type: "percentage" | "flat";
+  discount_value: number;
+  min_amount: number | null;
+  valid_until: string | null;
+}
 
 interface Walker {
   id: string;
@@ -24,6 +37,8 @@ interface Walker {
   service_area: string | null;
   pet_types: string | null;
   bio: string | null;
+  primaryImage?: string | null;
+  activeOffers?: VendorOffer[];
 }
 
 const PET_TYPE_LABEL: Record<string, string> = {
@@ -48,6 +63,9 @@ function WalkBookingModal({ walker, open, onClose }: {
   const [petName, setPetName] = useState("");
   const [petType, setPetType] = useState("");
   const [notes, setNotes] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedOffer, setAppliedOffer] = useState<VendorOffer | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
@@ -55,6 +73,22 @@ function WalkBookingModal({ walker, open, onClose }: {
   function handleClose() {
     onClose();
     setStep(1); setDate(""); setTime(""); setPetName(""); setPetType(""); setNotes("");
+    setCouponCode(""); setAppliedOffer(null); setCouponError(null);
+  }
+
+  function validateCoupon() {
+    const code = couponCode.trim().toUpperCase();
+    const offer = walker.activeOffers?.find(
+      (o) => o.coupon_code === code &&
+        (!o.valid_until || new Date(o.valid_until) >= new Date())
+    );
+    if (!offer) {
+      setCouponError("Invalid or expired coupon code");
+      setAppliedOffer(null);
+    } else {
+      setAppliedOffer(offer);
+      setCouponError(null);
+    }
   }
 
   async function handleConfirm() {
@@ -74,6 +108,8 @@ function WalkBookingModal({ walker, open, onClose }: {
       walk_date: date,
       walk_time: time,
       notes: notes || null,
+      coupon_code: appliedOffer?.coupon_code ?? null,
+      discount_amount: null,
       status: "pending",
     });
     setLoading(false);
@@ -97,7 +133,6 @@ function WalkBookingModal({ walker, open, onClose }: {
           <DialogTitle>Book a walk with {walker.full_name}</DialogTitle>
         </DialogHeader>
 
-        {/* Step indicator */}
         <div className="flex items-center gap-1 pb-2">
           {([1, 2, 3] as const).map((s) => (
             <div key={s} className="flex items-center gap-1 flex-1">
@@ -163,13 +198,48 @@ function WalkBookingModal({ walker, open, onClose }: {
         )}
 
         {step === 3 && (
-          <div className="rounded-xl border bg-muted/40 p-4 grid gap-3 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Walker</span><span className="font-medium">{walker.full_name}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span className="font-medium">{date}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Time</span><span className="font-medium">{time}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Pet</span><span className="font-medium">{petName} ({petType})</span></div>
-            {notes && <div className="flex justify-between"><span className="text-muted-foreground">Notes</span><span className="font-medium max-w-[60%] text-right">{notes}</span></div>}
-            <p className="text-xs text-muted-foreground border-t pt-3">The walker will review and confirm your booking. You&apos;ll be contacted directly.</p>
+          <div className="grid gap-4 py-2">
+            <div className="rounded-xl border bg-muted/40 p-4 grid gap-3 text-sm">
+              <div className="flex justify-between"><span className="text-muted-foreground">Walker</span><span className="font-medium">{walker.full_name}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span className="font-medium">{date}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Time</span><span className="font-medium">{time}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Pet</span><span className="font-medium">{petName} ({petType})</span></div>
+              {notes && <div className="flex justify-between"><span className="text-muted-foreground">Notes</span><span className="font-medium max-w-[60%] text-right">{notes}</span></div>}
+              {appliedOffer && (
+                <div className="flex justify-between text-emerald-600 border-t pt-3 font-medium">
+                  <span>Coupon applied</span>
+                  <span>{appliedOffer.coupon_code} — {appliedOffer.discount_type === "percentage" ? `${appliedOffer.discount_value}% off` : `₹${appliedOffer.discount_value} off`}</span>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground border-t pt-3">The walker will review and confirm your booking. You&apos;ll be contacted directly.</p>
+            </div>
+
+            {(walker.activeOffers?.length ?? 0) > 0 && (
+              <div className="grid gap-2">
+                <Label>Coupon code <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. WALK10"
+                    value={couponCode}
+                    className="font-mono uppercase"
+                    onChange={(e) => {
+                      setCouponCode(e.target.value.toUpperCase());
+                      setAppliedOffer(null);
+                      setCouponError(null);
+                    }}
+                  />
+                  <Button type="button" variant="outline" onClick={validateCoupon} disabled={!couponCode.trim()}>
+                    Apply
+                  </Button>
+                </div>
+                {couponError && <p className="text-xs text-destructive">{couponError}</p>}
+                {appliedOffer && (
+                  <p className="text-xs text-emerald-600 flex items-center gap-1 font-medium">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> {appliedOffer.title}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -210,11 +280,28 @@ function WalkerCard({ walker }: { walker: Walker }) {
   return (
     <>
       <div className="rounded-2xl border bg-card hover:shadow-md transition-shadow overflow-hidden">
-        <div className="h-24 bg-gradient-to-br from-amber-500/15 to-orange-400/10 flex items-center justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-400 text-white text-xl font-bold shadow-md">
-            {initials}
-          </div>
+        <div className="h-24 bg-gradient-to-br from-amber-500/15 to-orange-400/10 flex items-center justify-center overflow-hidden relative">
+          {walker.primaryImage ? (
+            <img src={walker.primaryImage} alt={walker.full_name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-400 text-white text-xl font-bold shadow-md">
+              {initials}
+            </div>
+          )}
         </div>
+
+        {/* Offer badges */}
+        {(walker.activeOffers?.length ?? 0) > 0 && (
+          <div className="flex flex-wrap gap-1 px-3 pt-2">
+            {walker.activeOffers!.slice(0, 2).map((offer) => (
+              <Badge key={offer.id} className="text-xs bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-100">
+                <Tag className="h-3 w-3 mr-1" />
+                {offer.coupon_code} — {offer.discount_type === "percentage" ? `${offer.discount_value}% off` : `₹${offer.discount_value} off`}
+              </Badge>
+            ))}
+          </div>
+        )}
+
         <div className="p-4 grid gap-2.5">
           <div>
             <h3 className="font-bold text-base">{walker.full_name}</h3>
@@ -262,11 +349,53 @@ export default function PetWalkingPage() {
     async function load() {
       setLoading(true);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase.from("pet_walkers") as any)
+      const { data: walkerData } = await (supabase.from("pet_walkers") as any)
         .select("id, user_id, full_name, phone, service_area, pet_types, bio")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
-      setWalkers((data as Walker[]) ?? []);
+
+      const walkerList = (walkerData as Walker[]) ?? [];
+      if (walkerList.length === 0) {
+        setWalkers([]);
+        setLoading(false);
+        return;
+      }
+
+      const walkerIds = walkerList.map((w) => w.id);
+      const [{ data: imagesData }, { data: offersData }] = await Promise.all([
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase.from("vendor_images") as any)
+          .select("vendor_id, image_url, is_primary")
+          .eq("vendor_type", "walking")
+          .in("vendor_id", walkerIds),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase.from("vendor_offers") as any)
+          .select("id, vendor_id, coupon_code, title, discount_type, discount_value, min_amount, valid_until")
+          .eq("vendor_type", "walking")
+          .eq("is_active", true)
+          .in("vendor_id", walkerIds),
+      ]);
+
+      const imageMap: Record<string, string | null> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (imagesData as any[] ?? []).forEach((img: any) => {
+        if (img.is_primary || !imageMap[img.vendor_id]) {
+          imageMap[img.vendor_id] = img.image_url;
+        }
+      });
+
+      const offersMap: Record<string, VendorOffer[]> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (offersData as any[] ?? []).forEach((o: any) => {
+        if (!offersMap[o.vendor_id]) offersMap[o.vendor_id] = [];
+        offersMap[o.vendor_id].push(o);
+      });
+
+      setWalkers(walkerList.map((w) => ({
+        ...w,
+        primaryImage: imageMap[w.id] ?? null,
+        activeOffers: offersMap[w.id] ?? [],
+      })));
       setLoading(false);
     }
     load();

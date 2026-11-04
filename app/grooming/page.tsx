@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import {
   Star, MapPin, Clock, CheckCircle2, Home, Building2,
-  SlidersHorizontal, ChevronRight, ChevronLeft, Loader2,
+  SlidersHorizontal, ChevronRight, ChevronLeft, Loader2, Tag,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -27,6 +27,16 @@ const TIME_SLOTS = [
 ];
 
 type BookingStep = 1 | 2 | 3;
+
+interface VendorOffer {
+  id: string;
+  coupon_code: string;
+  title: string;
+  discount_type: "percentage" | "flat";
+  discount_value: number;
+  min_amount: number | null;
+  valid_until: string | null;
+}
 
 interface Vendor {
   id: string;
@@ -39,6 +49,8 @@ interface Vendor {
   offers_home_service: boolean;
   offers_clinic_visit: boolean;
   services?: { id: string; price: number; pet_type: string; service_type: string }[];
+  primaryImage?: string | null;
+  activeOffers?: VendorOffer[];
 }
 
 function BookingModal({ vendor, serviceType, open, onClose }: {
@@ -51,6 +63,9 @@ function BookingModal({ vendor, serviceType, open, onClose }: {
   const [petType, setPetType] = useState("");
   const [petBreed, setPetBreed] = useState("");
   const [petAge, setPetAge] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedOffer, setAppliedOffer] = useState<VendorOffer | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
@@ -58,6 +73,37 @@ function BookingModal({ vendor, serviceType, open, onClose }: {
   const priceFrom = vendor.services?.length
     ? Math.min(...vendor.services.map((s) => s.price))
     : null;
+
+  const discountAmount = appliedOffer
+    ? appliedOffer.discount_type === "percentage"
+      ? Math.round((priceFrom ?? 0) * appliedOffer.discount_value / 100)
+      : appliedOffer.discount_value
+    : 0;
+  const finalPrice = Math.max(0, (priceFrom ?? 0) - discountAmount);
+
+  function validateCoupon() {
+    const code = couponCode.trim().toUpperCase();
+    const offer = vendor.activeOffers?.find(
+      (o) => o.coupon_code === code &&
+        (!o.valid_until || new Date(o.valid_until) >= new Date())
+    );
+    if (!offer) {
+      setCouponError("Invalid or expired coupon code");
+      setAppliedOffer(null);
+    } else if (offer.min_amount && (priceFrom ?? 0) < offer.min_amount) {
+      setCouponError(`Minimum booking amount ₹${offer.min_amount} required`);
+      setAppliedOffer(null);
+    } else {
+      setAppliedOffer(offer);
+      setCouponError(null);
+    }
+  }
+
+  function handleClose() {
+    onClose();
+    setStep(1); setDate(""); setTime(""); setPetName(""); setPetType(""); setPetBreed(""); setPetAge("");
+    setCouponCode(""); setAppliedOffer(null); setCouponError(null);
+  }
 
   async function handleConfirm() {
     setLoading(true);
@@ -85,7 +131,9 @@ function BookingModal({ vendor, serviceType, open, onClose }: {
       appointment_date: date,
       appointment_time: time,
       booking_type: serviceType,
-      total_price: priceFrom ?? 0,
+      total_price: appliedOffer ? finalPrice : (priceFrom ?? 0),
+      coupon_code: appliedOffer?.coupon_code ?? null,
+      discount_amount: discountAmount,
       status: "pending",
     });
     setLoading(false);
@@ -93,15 +141,14 @@ function BookingModal({ vendor, serviceType, open, onClose }: {
       toast({ title: "Booking failed", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Booking confirmed!", description: `${vendor.business_name} on ${date} at ${time}` });
-      onClose();
-      setStep(1); setDate(""); setTime(""); setPetName(""); setPetType(""); setPetBreed(""); setPetAge("");
+      handleClose();
     }
   }
 
   const STEP_TITLES = ["Select Date & Time", "Pet Details", "Review & Confirm"];
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Book {serviceType === "home" ? "Home Service" : "Clinic Visit"} — {vendor.business_name}</DialogTitle>
@@ -168,13 +215,53 @@ function BookingModal({ vendor, serviceType, open, onClose }: {
         )}
 
         {step === 3 && (
-          <div className="rounded-xl border bg-muted/40 p-4 grid gap-3 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Vendor</span><span className="font-medium">{vendor.business_name}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Service type</span><span className="font-medium capitalize">{serviceType}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Date & time</span><span className="font-medium">{date} · {time}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Pet</span><span className="font-medium">{petName} ({petType}{petBreed ? `, ${petBreed}` : ""})</span></div>
-            {priceFrom && (
-              <div className="flex justify-between border-t pt-3"><span className="text-muted-foreground">Estimated price</span><span className="font-bold text-primary">₹{priceFrom}+</span></div>
+          <div className="grid gap-4 py-2">
+            <div className="rounded-xl border bg-muted/40 p-4 grid gap-3 text-sm">
+              <div className="flex justify-between"><span className="text-muted-foreground">Vendor</span><span className="font-medium">{vendor.business_name}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Service type</span><span className="font-medium capitalize">{serviceType}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Date & time</span><span className="font-medium">{date} · {time}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Pet</span><span className="font-medium">{petName} ({petType}{petBreed ? `, ${petBreed}` : ""})</span></div>
+              {priceFrom != null && (
+                <>
+                  {appliedOffer && (
+                    <div className="flex justify-between text-emerald-600">
+                      <span>Discount ({appliedOffer.coupon_code})</span>
+                      <span className="font-medium">−₹{discountAmount}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t pt-3">
+                    <span className="text-muted-foreground">{appliedOffer ? "Final price" : "Estimated price"}</span>
+                    <span className="font-bold text-primary">₹{appliedOffer ? finalPrice : priceFrom}+</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {(vendor.activeOffers?.length ?? 0) > 0 && (
+              <div className="grid gap-2">
+                <Label>Coupon code <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. SAVE20"
+                    value={couponCode}
+                    className="font-mono uppercase"
+                    onChange={(e) => {
+                      setCouponCode(e.target.value.toUpperCase());
+                      setAppliedOffer(null);
+                      setCouponError(null);
+                    }}
+                  />
+                  <Button type="button" variant="outline" onClick={validateCoupon} disabled={!couponCode.trim()}>
+                    Apply
+                  </Button>
+                </div>
+                {couponError && <p className="text-xs text-destructive">{couponError}</p>}
+                {appliedOffer && (
+                  <p className="text-xs text-emerald-600 flex items-center gap-1 font-medium">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> {appliedOffer.title}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -208,7 +295,25 @@ function VendorCard({ vendor, activeTab, isOwnVendor }: { vendor: Vendor; active
   return (
     <>
       <Card className="overflow-hidden hover:shadow-md transition-shadow">
-        <div className="h-32 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-4xl">🐾</div>
+        <div className="h-32 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-4xl overflow-hidden relative">
+          {vendor.primaryImage
+            ? <img src={vendor.primaryImage} alt={vendor.business_name} className="w-full h-full object-cover" />
+            : <span>🐾</span>
+          }
+        </div>
+
+        {/* Offer badges */}
+        {(vendor.activeOffers?.length ?? 0) > 0 && (
+          <div className="flex flex-wrap gap-1 px-3 pt-2">
+            {vendor.activeOffers!.slice(0, 2).map((offer) => (
+              <Badge key={offer.id} className="text-xs bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-100">
+                <Tag className="h-3 w-3 mr-1" />
+                {offer.coupon_code} — {offer.discount_type === "percentage" ? `${offer.discount_value}% off` : `₹${offer.discount_value} off`}
+              </Badge>
+            ))}
+          </div>
+        )}
+
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-2">
             <div>
@@ -262,7 +367,7 @@ export default function GroomingPage() {
   useEffect(() => {
     async function fetchAll() {
       setLoading(true);
-      const [{ data: { user } }, { data }] = await Promise.all([
+      const [{ data: { user } }, { data: vendorData }] = await Promise.all([
         supabase.auth.getUser(),
         supabase
           .from("grooming_vendors")
@@ -271,7 +376,50 @@ export default function GroomingPage() {
           .order("rating", { ascending: false }),
       ]);
       setCurrentUserId(user?.id ?? null);
-      setVendors((data as Vendor[]) ?? []);
+
+      const vendorList = (vendorData as Vendor[]) ?? [];
+      if (vendorList.length === 0) {
+        setVendors([]);
+        setLoading(false);
+        return;
+      }
+
+      const vendorIds = vendorList.map((v) => v.id);
+      const [{ data: imagesData }, { data: offersData }] = await Promise.all([
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase.from("vendor_images") as any)
+          .select("vendor_id, image_url, is_primary")
+          .eq("vendor_type", "grooming")
+          .in("vendor_id", vendorIds),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase.from("vendor_offers") as any)
+          .select("id, vendor_id, coupon_code, title, discount_type, discount_value, min_amount, valid_until")
+          .eq("vendor_type", "grooming")
+          .eq("is_active", true)
+          .in("vendor_id", vendorIds),
+      ]);
+
+      // Build lookup maps
+      const imageMap: Record<string, string | null> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (imagesData as any[] ?? []).forEach((img: any) => {
+        if (img.is_primary || !imageMap[img.vendor_id]) {
+          imageMap[img.vendor_id] = img.image_url;
+        }
+      });
+
+      const offersMap: Record<string, VendorOffer[]> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (offersData as any[] ?? []).forEach((o: any) => {
+        if (!offersMap[o.vendor_id]) offersMap[o.vendor_id] = [];
+        offersMap[o.vendor_id].push(o);
+      });
+
+      setVendors(vendorList.map((v) => ({
+        ...v,
+        primaryImage: imageMap[v.id] ?? null,
+        activeOffers: offersMap[v.id] ?? [],
+      })));
       setLoading(false);
     }
     fetchAll();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   CheckCircle2, XCircle, Clock, TrendingUp, Star, Home, Building2,
   Plus, Pencil, MapPin, IndianRupee, Percent, Loader2, Save,
+  ImageIcon, Upload, Trash2, Tag, Calendar,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -66,6 +67,28 @@ interface VendorProfile {
   longitude: string;
   offers_home_service: boolean;
   offers_clinic_visit: boolean;
+}
+
+interface VendorImage {
+  id: string;
+  vendor_type: string;
+  vendor_id: string;
+  image_url: string;
+  is_primary: boolean;
+  display_order: number;
+}
+
+interface VendorOffer {
+  id: string;
+  vendor_type: string;
+  vendor_id: string;
+  coupon_code: string;
+  title: string;
+  discount_type: "percentage" | "flat";
+  discount_value: number;
+  min_amount: number | null;
+  valid_until: string | null;
+  is_active: boolean;
 }
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
@@ -175,6 +198,115 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
   );
 }
 
+function AddOfferDialog({ vendorType, vendorId, open, onClose, onAdded }: {
+  vendorType: "grooming" | "walking";
+  vendorId: string;
+  open: boolean;
+  onClose: () => void;
+  onAdded: (offer: VendorOffer) => void;
+}) {
+  const [couponCode, setCouponCode] = useState("");
+  const [title, setTitle] = useState("");
+  const [discountType, setDiscountType] = useState<"percentage" | "flat">("percentage");
+  const [discountValue, setDiscountValue] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [validUntil, setValidUntil] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const supabase = createClient();
+
+  async function handleAdd() {
+    if (!couponCode || !title || !discountValue) return;
+    setLoading(true);
+    const payload = {
+      vendor_type: vendorType,
+      vendor_id: vendorId,
+      coupon_code: couponCode.trim().toUpperCase(),
+      title,
+      discount_type: discountType,
+      discount_value: parseFloat(discountValue),
+      min_amount: minAmount ? parseFloat(minAmount) : null,
+      valid_until: validUntil || null,
+      is_active: true,
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from("vendor_offers") as any).insert(payload).select().single();
+    setLoading(false);
+    if (error) {
+      toast({ title: "Failed to create offer", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Offer created!", description: `${couponCode.toUpperCase()} is now active.` });
+      onAdded(data as VendorOffer);
+      onClose();
+      setCouponCode(""); setTitle(""); setDiscountValue(""); setMinAmount(""); setValidUntil("");
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle>Create Offer</DialogTitle></DialogHeader>
+        <div className="grid gap-4 py-2">
+          <div className="grid gap-1.5">
+            <Label>Coupon code *</Label>
+            <Input
+              placeholder="e.g. SAVE20"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+              className="font-mono uppercase"
+            />
+            <p className="text-xs text-muted-foreground">Customers will enter this code during checkout</p>
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Offer title *</Label>
+            <Input placeholder="e.g. First booking discount" value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label>Discount type *</Label>
+              <Select value={discountType} onValueChange={(v) => setDiscountType(v as "percentage" | "flat")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percentage">Percentage (%)</SelectItem>
+                  <SelectItem value="flat">Flat amount (₹)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label>{discountType === "percentage" ? "Discount (%)" : "Discount (₹)"} *</Label>
+              <Input
+                type="number"
+                min="0"
+                max={discountType === "percentage" ? "100" : undefined}
+                step={discountType === "percentage" ? "1" : "10"}
+                placeholder={discountType === "percentage" ? "20" : "100"}
+                value={discountValue}
+                onChange={(e) => setDiscountValue(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label>Min booking (₹) <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input type="number" placeholder="500" value={minAmount} onChange={(e) => setMinAmount(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Valid until <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input type="date" value={validUntil} min={new Date().toISOString().split("T")[0]} onChange={(e) => setValidUntil(e.target.value)} />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleAdd} disabled={loading || !couponCode || !title || !discountValue}>
+            {loading && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Create offer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function VendorDashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [walkBookings, setWalkBookings] = useState<WalkBooking[]>([]);
@@ -187,12 +319,19 @@ export default function VendorDashboardPage() {
   });
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [approvalStatus, setApprovalStatus] = useState<"pending" | "approved" | "rejected" | null>(null);
+  const [images, setImages] = useState<VendorImage[]>([]);
+  const [offers, setOffers] = useState<VendorOffer[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [addOfferOpen, setAddOfferOpen] = useState(false);
+  const [offerTarget, setOfferTarget] = useState<"grooming" | "walking">("grooming");
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [addServiceOpen, setAddServiceOpen] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
   const router = useRouter();
+  const groomingFileRef = useRef<HTMLInputElement>(null);
+  const walkingFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -200,23 +339,14 @@ export default function VendorDashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      // Redirect customers — this portal is vendors only
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: userProfile } = await (supabase.from("users") as any)
-        .select("role")
-        .eq("id", user.id)
-        .single();
-      if (userProfile?.role === "customer") {
-        router.push("/dashboard");
-        return;
-      }
+        .select("role").eq("id", user.id).single();
+      if (userProfile?.role === "customer") { router.push("/dashboard"); return; }
 
-      // Load vendor profile
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: vendor } = await (supabase.from("grooming_vendors") as any)
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
+        .select("*").eq("user_id", user.id).single();
 
       if (vendor) {
         setVendorId(vendor.id);
@@ -235,7 +365,6 @@ export default function VendorDashboardPage() {
           offers_clinic_visit: vendor.offers_clinic_visit,
         });
 
-        // Load bookings and services
         const [{ data: bookingData }, { data: serviceData }] = await Promise.all([
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (supabase.from("bookings") as any).select("*, users(full_name, email), services(name)").eq("vendor_id", vendor.id).order("appointment_date", { ascending: false }),
@@ -245,32 +374,146 @@ export default function VendorDashboardPage() {
         setBookings((bookingData as Booking[]) ?? []);
         setServices(serviceData ?? []);
       } else {
-        // Pre-fill email from auth
         setProfile((p) => ({ ...p, email: user.email ?? "" }));
       }
 
-      // Also check if this vendor is a registered pet walker
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: walkerData } = await (supabase.from("pet_walkers") as any)
-        .select("id, full_name, approval_status")
-        .eq("user_id", user.id)
-        .maybeSingle();
+        .select("id, full_name, approval_status").eq("user_id", user.id).maybeSingle();
 
       if (walkerData) {
         setWalkerProfile(walkerData as WalkerProfile);
         if (walkerData.approval_status === "approved") {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { data: wbData } = await (supabase.from("walker_bookings") as any)
-            .select("*, users(full_name, email)")
-            .eq("walker_id", walkerData.id)
-            .order("walk_date", { ascending: false });
+            .select("*, users(full_name, email)").eq("walker_id", walkerData.id).order("walk_date", { ascending: false });
           setWalkBookings((wbData as WalkBooking[]) ?? []);
         }
       }
+
+      // Load images and offers for all vendor profiles this user owns
+      const profileQueries: { type: "grooming" | "walking"; id: string }[] = [];
+      if (vendor) profileQueries.push({ type: "grooming", id: vendor.id });
+      if (walkerData) profileQueries.push({ type: "walking", id: walkerData.id });
+
+      if (profileQueries.length > 0) {
+        const imgPromises = profileQueries.map(({ type, id }) =>
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase.from("vendor_images") as any).select("*").eq("vendor_type", type).eq("vendor_id", id)
+        );
+        const offerPromises = profileQueries.map(({ type, id }) =>
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase.from("vendor_offers") as any).select("*").eq("vendor_type", type).eq("vendor_id", id)
+        );
+        const [imgResults, offerResults] = await Promise.all([
+          Promise.all(imgPromises),
+          Promise.all(offerPromises),
+        ]);
+        setImages(imgResults.flatMap((r) => (r.data as VendorImage[]) ?? []));
+        setOffers(offerResults.flatMap((r) => (r.data as VendorOffer[]) ?? []));
+      }
+
       setLoading(false);
     }
     loadData();
   }, []);
+
+  async function handleImageUpload(
+    e: React.ChangeEvent<HTMLInputElement>,
+    vendorType: "grooming" | "walking",
+    vendorId: string
+  ) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image too large", description: "Max 5 MB per photo.", variant: "destructive" });
+      return;
+    }
+    const existingCount = images.filter((i) => i.vendor_type === vendorType && i.vendor_id === vendorId).length;
+    if (existingCount >= 5) {
+      toast({ title: "Maximum 5 photos reached", variant: "destructive" });
+      return;
+    }
+    setUploadingImage(true);
+    const ext = file.name.split(".").pop();
+    const path = `${vendorType}/${vendorId}/${Date.now()}.${ext}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from("vendor-images")
+      .upload(path, file, { cacheControl: "3600", upsert: false });
+
+    if (uploadError) {
+      toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" });
+      setUploadingImage(false);
+      return;
+    }
+    const { data: { publicUrl } } = supabase.storage.from("vendor-images").getPublicUrl(uploadData.path);
+    const isPrimary = existingCount === 0;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: newImg, error: insertError } = await (supabase.from("vendor_images") as any)
+      .insert({ vendor_type: vendorType, vendor_id: vendorId, image_url: publicUrl, is_primary: isPrimary, display_order: existingCount })
+      .select().single();
+
+    setUploadingImage(false);
+    if (insertError) {
+      toast({ title: "Failed to save image", description: insertError.message, variant: "destructive" });
+    } else {
+      setImages((prev) => [...prev, newImg as VendorImage]);
+      toast({ title: "Photo uploaded!" });
+    }
+  }
+
+  async function setPrimaryImage(imageId: string, vendorType: string, vendorIdArg: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from("vendor_images") as any)
+      .update({ is_primary: false }).eq("vendor_type", vendorType).eq("vendor_id", vendorIdArg);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from("vendor_images") as any).update({ is_primary: true }).eq("id", imageId);
+    setImages((prev) =>
+      prev.map((i) =>
+        i.vendor_type === vendorType && i.vendor_id === vendorIdArg
+          ? { ...i, is_primary: i.id === imageId }
+          : i
+      )
+    );
+    toast({ title: "Cover photo updated" });
+  }
+
+  async function deleteImage(img: VendorImage) {
+    const pathPart = img.image_url.split("/vendor-images/")[1];
+    if (pathPart) await supabase.storage.from("vendor-images").remove([pathPart]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from("vendor_images") as any).delete().eq("id", img.id);
+    setImages((prev) => {
+      const next = prev.filter((i) => i.id !== img.id);
+      if (img.is_primary) {
+        const first = next.find((i) => i.vendor_type === img.vendor_type && i.vendor_id === img.vendor_id);
+        if (first) setPrimaryImage(first.id, first.vendor_type, first.vendor_id);
+      }
+      return next;
+    });
+    toast({ title: "Photo removed" });
+  }
+
+  async function toggleOfferActive(offer: VendorOffer) {
+    const newActive = !offer.is_active;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("vendor_offers") as any)
+      .update({ is_active: newActive }).eq("id", offer.id);
+    if (!error) {
+      setOffers((prev) => prev.map((o) => o.id === offer.id ? { ...o, is_active: newActive } : o));
+      toast({ title: newActive ? "Offer activated" : "Offer paused" });
+    }
+  }
+
+  async function deleteOffer(offerId: string) {
+    if (!confirm("Delete this offer?")) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from("vendor_offers") as any).delete().eq("id", offerId);
+    setOffers((prev) => prev.filter((o) => o.id !== offerId));
+    toast({ title: "Offer deleted" });
+  }
 
   async function saveProfile() {
     setSavingProfile(true);
@@ -293,10 +536,8 @@ export default function VendorDashboardPage() {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = vendorId
-      // Update: never touch is_active or approval_status — admin controls those
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ? await (supabase.from("grooming_vendors") as any).update(basePayload).eq("id", vendorId).select().single()
-      // New listing: start inactive, pending admin approval
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       : await (supabase.from("grooming_vendors") as any).insert({ ...basePayload, is_active: false, approval_status: "pending" }).select().single();
 
@@ -306,7 +547,6 @@ export default function VendorDashboardPage() {
     } else {
       if (!vendorId) setVendorId(data.id);
       toast({ title: vendorId ? "Profile updated!" : "Business registered!", description: vendorId ? "Your changes have been saved." : "Your listing is under review and will go live once approved." });
-      // Also update user role to vendor
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase.from("users") as any).update({ role: "vendor" }).eq("id", user.id);
     }
@@ -340,6 +580,153 @@ export default function VendorDashboardPage() {
   const pendingCount = bookings.filter((b) => b.status === "pending").length;
   const walkPendingCount = walkBookings.filter((b) => b.status === "pending").length;
 
+  const hasAnyProfile = !!(vendorId || walkerProfile);
+
+  // Render photo management section for a given profile type
+  function PhotoSection({ vendorType, vid, title }: { vendorType: "grooming" | "walking"; vid: string; title?: string }) {
+    const sectionImages = images.filter((i) => i.vendor_type === vendorType && i.vendor_id === vid);
+    const canUpload = sectionImages.length < 5;
+    const fileRef = vendorType === "grooming" ? groomingFileRef : walkingFileRef;
+    return (
+      <div className="grid gap-4">
+        {title && <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">{title}</h3>}
+        {sectionImages.length > 0 ? (
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+            {sectionImages.map((img) => (
+              <div key={img.id} className="relative group aspect-square rounded-xl overflow-hidden border">
+                <img src={img.image_url} alt="Vendor photo" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                  {!img.is_primary && (
+                    <button
+                      onClick={() => setPrimaryImage(img.id, img.vendor_type, img.vendor_id)}
+                      className="text-xs text-white font-medium bg-white/20 rounded-full px-2 py-1 hover:bg-white/30"
+                    >
+                      Set cover
+                    </button>
+                  )}
+                  <button
+                    onClick={() => deleteImage(img)}
+                    className="text-xs text-red-300 hover:text-red-200"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                {img.is_primary && (
+                  <span className="absolute top-1.5 left-1.5 text-xs bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 font-medium">
+                    Cover
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border-2 border-dashed p-8 text-center text-muted-foreground">
+            <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm font-medium">No photos yet</p>
+            <p className="text-xs mt-1">Upload photos to attract more customers</p>
+          </div>
+        )}
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">{sectionImages.length}/5 photos</p>
+          <label className={canUpload ? "cursor-pointer" : "opacity-50 cursor-not-allowed"}>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={!canUpload || uploadingImage}
+              onChange={(e) => handleImageUpload(e, vendorType, vid)}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!canUpload || uploadingImage}
+              onClick={() => fileRef.current?.click()}
+              className="gap-1.5"
+            >
+              {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              Upload photo
+            </Button>
+          </label>
+        </div>
+      </div>
+    );
+  }
+
+  // Render offers management section for a given profile type
+  function OffersSection({ vendorType, vid, title }: { vendorType: "grooming" | "walking"; vid: string; title?: string }) {
+    const sectionOffers = offers.filter((o) => o.vendor_type === vendorType && o.vendor_id === vid);
+    return (
+      <div className="grid gap-4">
+        {title && <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">{title}</h3>}
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            onClick={() => { setOfferTarget(vendorType); setAddOfferOpen(true); }}
+            className="gap-1.5"
+          >
+            <Plus className="h-4 w-4" /> Add offer
+          </Button>
+        </div>
+        {sectionOffers.length === 0 ? (
+          <div className="rounded-xl border-2 border-dashed p-8 text-center text-muted-foreground">
+            <Tag className="h-8 w-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm font-medium">No offers yet</p>
+            <p className="text-xs mt-1">Create coupon codes to attract customers</p>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {sectionOffers.map((offer) => (
+              <div key={offer.id} className={`rounded-xl border p-4 grid gap-2 transition-opacity ${offer.is_active ? "" : "opacity-60"}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-bold text-base tracking-wide">{offer.coupon_code}</span>
+                      <Badge variant={offer.is_active ? "default" : "secondary"} className="text-xs">
+                        {offer.is_active ? "Active" : "Paused"}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-0.5">{offer.title}</p>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
+                      <span className="font-medium text-primary">
+                        {offer.discount_type === "percentage" ? `${offer.discount_value}% off` : `₹${offer.discount_value} off`}
+                      </span>
+                      {offer.min_amount && <span>Min ₹{offer.min_amount}</span>}
+                      {offer.valid_until && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" /> Until {offer.valid_until}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-xs"
+                      onClick={() => toggleOfferActive(offer)}
+                    >
+                      {offer.is_active ? "Pause" : "Activate"}
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => deleteOffer(offer.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <>
@@ -355,7 +742,6 @@ export default function VendorDashboardPage() {
     <>
       <Navbar />
       <main className="container mx-auto max-w-4xl px-4 py-6">
-        {/* Approval status banner */}
         {approvalStatus && approvalStatus !== "approved" && (
           <div className={`mb-6 rounded-xl border p-4 text-sm flex items-start gap-3 ${
             approvalStatus === "pending"
@@ -367,9 +753,7 @@ export default function VendorDashboardPage() {
                 <Clock className="h-5 w-5 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold">Your listing is under review</p>
-                  <p className="text-xs mt-0.5 opacity-80">
-                    Our team will review and approve your profile shortly. You won&apos;t be visible to customers until approved.
-                  </p>
+                  <p className="text-xs mt-0.5 opacity-80">Our team will review and approve your profile shortly. You won&apos;t be visible to customers until approved.</p>
                 </div>
               </>
             ) : (
@@ -377,9 +761,7 @@ export default function VendorDashboardPage() {
                 <XCircle className="h-5 w-5 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold">Your listing was not approved</p>
-                  <p className="text-xs mt-0.5 opacity-80">
-                    Please update your profile information and contact support if you think this is a mistake.
-                  </p>
+                  <p className="text-xs mt-0.5 opacity-80">Please update your profile information and contact support if you think this is a mistake.</p>
                 </div>
               </>
             )}
@@ -391,6 +773,7 @@ export default function VendorDashboardPage() {
             <p className="font-semibold">Your listing is live and visible to customers</p>
           </div>
         )}
+
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Vendor Dashboard</h1>
@@ -424,7 +807,7 @@ export default function VendorDashboardPage() {
         )}
 
         <Tabs defaultValue={vendorId ? "bookings" : "profile"}>
-          <TabsList className="w-full mb-5">
+          <TabsList className="w-full mb-5 flex-wrap h-auto gap-1">
             <TabsTrigger value="bookings" className="flex-1">
               Bookings {pendingCount > 0 && <span className="ml-1.5 rounded-full bg-primary text-primary-foreground text-xs px-1.5 py-0.5">{pendingCount}</span>}
             </TabsTrigger>
@@ -434,7 +817,17 @@ export default function VendorDashboardPage() {
                 Walk Requests {walkPendingCount > 0 && <span className="ml-1.5 rounded-full bg-amber-500 text-white text-xs px-1.5 py-0.5">{walkPendingCount}</span>}
               </TabsTrigger>
             )}
-            <TabsTrigger value="profile" className="flex-1">Business Profile</TabsTrigger>
+            {hasAnyProfile && (
+              <>
+                <TabsTrigger value="photos" className="flex-1 gap-1.5">
+                  <ImageIcon className="h-3.5 w-3.5" /> Photos
+                </TabsTrigger>
+                <TabsTrigger value="offers" className="flex-1 gap-1.5">
+                  <Tag className="h-3.5 w-3.5" /> Offers
+                </TabsTrigger>
+              </>
+            )}
+            <TabsTrigger value="profile" className="flex-1">Profile</TabsTrigger>
           </TabsList>
 
           {/* Bookings */}
@@ -528,7 +921,7 @@ export default function VendorDashboardPage() {
             )}
           </TabsContent>
 
-          {/* Walk Requests — only shown for pet walkers */}
+          {/* Walk Requests */}
           {walkerProfile && (
             <TabsContent value="walk-requests" className="grid gap-3">
               {walkerProfile.approval_status !== "approved" ? (
@@ -576,6 +969,46 @@ export default function VendorDashboardPage() {
                     )}
                   </div>
                 ))
+              )}
+            </TabsContent>
+          )}
+
+          {/* Photos */}
+          {hasAnyProfile && (
+            <TabsContent value="photos" className="grid gap-6">
+              {vendorId && (
+                <PhotoSection
+                  vendorType="grooming"
+                  vid={vendorId}
+                  title={walkerProfile ? "Grooming Spa Photos" : undefined}
+                />
+              )}
+              {walkerProfile && (
+                <PhotoSection
+                  vendorType="walking"
+                  vid={walkerProfile.id}
+                  title={vendorId ? "Walker Profile Photos" : undefined}
+                />
+              )}
+            </TabsContent>
+          )}
+
+          {/* Offers */}
+          {hasAnyProfile && (
+            <TabsContent value="offers" className="grid gap-6">
+              {vendorId && (
+                <OffersSection
+                  vendorType="grooming"
+                  vid={vendorId}
+                  title={walkerProfile ? "Grooming Offers" : undefined}
+                />
+              )}
+              {walkerProfile && (
+                <OffersSection
+                  vendorType="walking"
+                  vid={walkerProfile.id}
+                  title={vendorId ? "Walker Offers" : undefined}
+                />
               )}
             </TabsContent>
           )}
@@ -659,7 +1092,18 @@ export default function VendorDashboardPage() {
           </TabsContent>
         </Tabs>
       </main>
-      {vendorId && <AddServiceDialog vendorId={vendorId} open={addServiceOpen} onClose={() => setAddServiceOpen(false)} onAdded={() => { /* refetch services */ }} />}
+
+      {vendorId && <AddServiceDialog vendorId={vendorId} open={addServiceOpen} onClose={() => setAddServiceOpen(false)} onAdded={() => { }} />}
+
+      {hasAnyProfile && (
+        <AddOfferDialog
+          vendorType={offerTarget}
+          vendorId={offerTarget === "grooming" ? vendorId! : walkerProfile!.id}
+          open={addOfferOpen}
+          onClose={() => setAddOfferOpen(false)}
+          onAdded={(offer) => setOffers((prev) => [...prev, offer])}
+        />
+      )}
     </>
   );
 }
