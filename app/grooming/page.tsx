@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import {
   Star, MapPin, Clock, CheckCircle2, Home, Building2,
-  SlidersHorizontal, ChevronRight, ChevronLeft, Loader2, Tag,
+  SlidersHorizontal, ChevronRight, ChevronLeft, Loader2, Tag, ArrowLeft,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -277,7 +277,7 @@ function BookingModal({ vendor, serviceType, open, onClose }: {
               Next <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={handleConfirm} disabled={loading} className="bg-green-600 hover:bg-green-700">
+            <Button onClick={handleConfirm} disabled={loading} className="bg-gradient-to-r from-[#62C995] to-[#43B07A] text-white hover:opacity-90">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
               Confirm booking
             </Button>
@@ -294,25 +294,26 @@ function VendorCard({ vendor, activeTab, isOwnVendor }: { vendor: Vendor; active
 
   return (
     <>
-      <Card className="overflow-hidden hover:shadow-md transition-shadow">
-        <div className="h-32 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-4xl overflow-hidden relative">
-          {vendor.primaryImage
-            ? <img src={vendor.primaryImage} alt={vendor.business_name} className="w-full h-full object-cover" />
-            : <span>🐾</span>
-          }
+      <Card className="overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+        <div className="h-40 bg-gradient-to-br from-[#62C995]/20 to-[#B8E8C9]/30 flex items-center justify-center overflow-hidden relative">
+          {vendor.primaryImage ? (
+            <img src={vendor.primaryImage} alt={vendor.business_name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/60 dark:bg-card/60 shadow-sm backdrop-blur-sm text-3xl">
+              ✂️
+            </div>
+          )}
+          {(vendor.activeOffers?.length ?? 0) > 0 && (
+            <div className="absolute bottom-2 left-2 flex flex-wrap gap-1">
+              {vendor.activeOffers!.slice(0, 1).map((offer) => (
+                <span key={offer.id} className="inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-sm px-2.5 py-0.5 text-xs font-semibold text-white">
+                  <Tag className="h-3 w-3" />
+                  {offer.discount_type === "percentage" ? `${offer.discount_value}% off` : `₹${offer.discount_value} off`}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-
-        {/* Offer badges */}
-        {(vendor.activeOffers?.length ?? 0) > 0 && (
-          <div className="flex flex-wrap gap-1 px-3 pt-2">
-            {vendor.activeOffers!.slice(0, 2).map((offer) => (
-              <Badge key={offer.id} className="text-xs bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-100">
-                <Tag className="h-3 w-3 mr-1" />
-                {offer.coupon_code} — {offer.discount_type === "percentage" ? `${offer.discount_value}% off` : `₹${offer.discount_value} off`}
-              </Badge>
-            ))}
-          </div>
-        )}
 
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-2">
@@ -436,6 +437,9 @@ export default function GroomingPage() {
     <>
       <Navbar />
       <main className="container mx-auto max-w-3xl px-4 py-6">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
+          <ArrowLeft className="h-4 w-4" /> Back to home
+        </Link>
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Grooming Spas & Salons</h1>
           <p className="text-sm text-muted-foreground mt-1">Verified groomers near Dehradun</p>
@@ -448,9 +452,9 @@ export default function GroomingPage() {
           </TabsList>
 
           <div className="mt-4 flex items-center gap-2 flex-wrap">
-            <div className="flex rounded-lg border overflow-hidden text-sm">
+            <div className="flex items-center gap-2">
               {(["all", "dog", "cat"] as const).map((p) => (
-                <button key={p} onClick={() => setPetFilter(p)} className={`px-3 py-1.5 font-medium transition-colors capitalize ${petFilter === p ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}>
+                <button key={p} onClick={() => setPetFilter(p)} className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all border ${petFilter === p ? "bg-[#62C995] text-white border-[#62C995] shadow-sm" : "border-border/60 hover:border-[#62C995]/40 hover:bg-accent"}`}>
                   {p === "all" ? "All pets" : p === "dog" ? "🐶 Dogs" : "🐱 Cats"}
                 </button>
               ))}

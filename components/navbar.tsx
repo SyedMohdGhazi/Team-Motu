@@ -61,8 +61,8 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-          <PawPrint className="h-6 w-6 text-primary" />
-          <span>Team Motu</span>
+          <PawPrint className="h-6 w-6 text-[#62C995]" />
+          <span className="bg-gradient-to-r from-[#35443B] to-[#62C995] bg-clip-text text-transparent dark:from-[#B8E8C9] dark:to-[#62C995]">Team Motu</span>
         </Link>
 
         <div className="flex items-center gap-1">

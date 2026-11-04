@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -260,7 +259,7 @@ function WalkBookingModal({ walker, open, onClose }: {
             <Button
               onClick={handleConfirm}
               disabled={loading}
-              className="bg-gradient-to-r from-amber-500 to-orange-400 text-white hover:opacity-90"
+              className="bg-gradient-to-r from-[#FFAA62] to-[#FF8C42] text-white hover:opacity-90"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
               Confirm booking
@@ -279,34 +278,32 @@ function WalkerCard({ walker }: { walker: Walker }) {
 
   return (
     <>
-      <div className="rounded-2xl border bg-card hover:shadow-md transition-shadow overflow-hidden">
-        <div className="h-24 bg-gradient-to-br from-amber-500/15 to-orange-400/10 flex items-center justify-center overflow-hidden relative">
+      <div className="rounded-2xl border bg-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
+        <div className="h-36 bg-gradient-to-br from-[#FFAA62]/20 to-[#FFD966]/20 flex items-center justify-center overflow-hidden relative">
           {walker.primaryImage ? (
             <img src={walker.primaryImage} alt={walker.full_name} className="w-full h-full object-cover" />
           ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-400 text-white text-xl font-bold shadow-md">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFAA62] to-[#FF8C42] text-white text-2xl font-bold shadow-lg ring-4 ring-white/30">
               {initials}
             </div>
           )}
+          {(walker.activeOffers?.length ?? 0) > 0 && (
+            <div className="absolute bottom-2 left-2 flex flex-wrap gap-1">
+              {walker.activeOffers!.slice(0, 1).map((offer) => (
+                <span key={offer.id} className="inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-sm px-2.5 py-0.5 text-xs font-semibold text-white">
+                  <Tag className="h-3 w-3" />
+                  {offer.discount_type === "percentage" ? `${offer.discount_value}% off` : `₹${offer.discount_value} off`}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-
-        {/* Offer badges */}
-        {(walker.activeOffers?.length ?? 0) > 0 && (
-          <div className="flex flex-wrap gap-1 px-3 pt-2">
-            {walker.activeOffers!.slice(0, 2).map((offer) => (
-              <Badge key={offer.id} className="text-xs bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-100">
-                <Tag className="h-3 w-3 mr-1" />
-                {offer.coupon_code} — {offer.discount_type === "percentage" ? `${offer.discount_value}% off` : `₹${offer.discount_value} off`}
-              </Badge>
-            ))}
-          </div>
-        )}
 
         <div className="p-4 grid gap-2.5">
           <div>
             <h3 className="font-bold text-base">{walker.full_name}</h3>
             {petLabel && (
-              <span className="inline-block mt-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2.5 py-0.5 text-xs font-medium">
+              <span className="inline-block mt-1 rounded-full bg-[#FFAA62]/10 text-[#CC7A00] border border-[#FFAA62]/30 px-2.5 py-0.5 text-xs font-medium">
                 {petLabel}
               </span>
             )}
@@ -325,7 +322,7 @@ function WalkerCard({ walker }: { walker: Walker }) {
 
           <Button
             onClick={() => setBookingOpen(true)}
-            className="mt-1 w-full bg-gradient-to-r from-amber-500 to-orange-400 text-white hover:opacity-90"
+            className="mt-1 w-full bg-gradient-to-r from-[#FFAA62] to-[#FF8C42] text-white hover:opacity-90 shadow-sm hover:shadow-md transition-all"
           >
             Book a walk
           </Button>
@@ -420,12 +417,12 @@ export default function PetWalkingPage() {
           <p className="text-sm text-muted-foreground mt-1">Certified pet walkers near Dehradun</p>
         </div>
 
-        <div className="flex rounded-lg border overflow-hidden text-sm mb-6 w-fit">
+        <div className="flex items-center gap-2 mb-6">
           {(["all", "dogs", "cats"] as const).map((p) => (
             <button
               key={p}
               onClick={() => setPetFilter(p)}
-              className={`px-4 py-2 font-medium transition-colors capitalize ${petFilter === p ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all border ${petFilter === p ? "bg-[#FFAA62] text-white border-[#FFAA62] shadow-sm" : "border-border/60 hover:border-[#FFAA62]/40 hover:bg-accent"}`}
             >
               {p === "all" ? "All pets" : p === "dogs" ? "🐶 Dogs" : "🐱 Cats"}
             </button>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ShieldCheck, MapPin, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { HomeBg } from "@/components/home-bg";
 
@@ -32,8 +32,8 @@ const tiles = [
       "Book professional groomers for baths, haircuts, nail trims, and full spa packages — doorstep visits or a salon appointment, your choice.",
     href: "/grooming",
     countKey: "vendors" as const,
-    color: "from-violet-500 to-purple-400",
-    bgGlow: "from-violet-500/20 via-purple-400/10 to-transparent",
+    color: "from-[#62C995] to-[#43B07A]",
+    bgGlow: "from-[#62C995]/20 via-[#B8E8C9]/10 to-transparent",
     badges: ["At-Home", "Salon Visit", "Dogs & Cats"],
   },
   {
@@ -44,8 +44,8 @@ const tiles = [
       "Too busy for a walk? Book a certified pet walker for your dog or cat — scheduled daily walks, solo or group, right in your neighbourhood.",
     href: "/pet-walking",
     countKey: "walkers" as const,
-    color: "from-amber-500 to-orange-400",
-    bgGlow: "from-amber-500/20 via-orange-400/10 to-transparent",
+    color: "from-[#FFAA62] to-[#FF8C42]",
+    bgGlow: "from-[#FFAA62]/20 via-[#FFD966]/10 to-transparent",
     badges: ["Solo Walks", "Group Walks", "Daily Schedule"],
   },
 ];
@@ -63,12 +63,12 @@ export default async function HomePage() {
         <section className="relative px-4 pb-8 pt-14 text-center sm:pt-20">
           <div className="mx-auto max-w-2xl">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur-sm">
-              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="h-2 w-2 rounded-full bg-[#62C995] animate-pulse" />
               Live · Dehradun, Uttarakhand
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
               Your pet deserves{" "}
-              <span className="bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[#62C995] to-[#FFAA62] bg-clip-text text-transparent">
                 the best
               </span>
             </h1>
@@ -78,7 +78,7 @@ export default async function HomePage() {
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/grooming"
-                className="rounded-full bg-gradient-to-r from-violet-500 to-purple-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/30 transition-all hover:shadow-violet-500/50 hover:-translate-y-0.5"
+                className="rounded-full bg-gradient-to-r from-[#62C995] to-[#43B07A] px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#62C995]/30 transition-all hover:shadow-[#62C995]/50 hover:-translate-y-0.5"
               >
                 Book a Groomer
               </Link>
@@ -93,7 +93,7 @@ export default async function HomePage() {
         </section>
 
         {/* Service Tiles */}
-        <section className="container mx-auto grid grid-cols-1 gap-5 px-4 pb-16 pt-10 sm:grid-cols-2">
+        <section className="container mx-auto grid grid-cols-1 gap-5 px-4 pb-10 pt-10 sm:grid-cols-2 max-w-4xl">
           {tiles.map(({ emoji, fullTitle, subtitle, description, href, countKey, color, bgGlow, badges }) => {
             const count = counts[countKey];
             return (
@@ -112,7 +112,7 @@ export default async function HomePage() {
                     </div>
                     {count > 0 && (
                       <span className="flex items-center gap-1.5 rounded-full border bg-background/80 px-3 py-1 text-xs font-semibold backdrop-blur">
-                        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#62C995]" />
                         {count} active
                       </span>
                     )}
@@ -154,6 +154,24 @@ export default async function HomePage() {
               </div>
             );
           })}
+        </section>
+        {/* Trust strip */}
+        <section className="container mx-auto max-w-4xl px-4 pb-16">
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { Icon: ShieldCheck, label: "Verified vendors", desc: "Every listing reviewed by our team" },
+              { Icon: MapPin, label: "Dehradun-local", desc: "Only local services, no middlemen" },
+              { Icon: Zap, label: "Easy booking", desc: "Book in under 2 minutes" },
+            ].map(({ Icon, label, desc }) => (
+              <div key={label} className="rounded-2xl border border-border/50 bg-card/70 backdrop-blur-sm p-4 text-center">
+                <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
+                <p className="text-xs font-semibold">{label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">{desc}</p>
+              </div>
+            ))}
+          </div>
         </section>
 
       </main>

@@ -104,8 +104,11 @@ export default function DashboardPage() {
 
         {/* Pet circles */}
         {!loading && (
-          <div className="mb-8">
-            <p className="text-xs text-muted-foreground mb-3 font-semibold uppercase tracking-wider">My Pets</p>
+          <div className="mb-8 rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">My Pets</p>
+              <Link href="/pet/my" className="text-xs text-primary hover:underline font-medium">Manage →</Link>
+            </div>
             <div className="flex items-start gap-4 overflow-x-auto pb-2 no-scrollbar">
               {pets.map((pet) => {
                 const isActive = activePetId === pet.id;
@@ -117,8 +120,8 @@ export default function DashboardPage() {
                   >
                     <div className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-3xl transition-all duration-200 ${
                       isActive
-                        ? "border-[#62C995] bg-[#62C995]/15 shadow-lg shadow-[#62C995]/25 scale-110"
-                        : "border-border bg-card hover:border-[#62C995]/50 hover:scale-105"
+                        ? "border-[#62C995] bg-[#62C995]/15 shadow-lg shadow-[#62C995]/30 scale-110 ring-2 ring-[#62C995]/20 ring-offset-2"
+                        : "border-border bg-card hover:border-[#62C995]/50 hover:scale-105 hover:shadow-md"
                     }`}>
                       {PET_EMOJI[pet.type] ?? "🐾"}
                     </div>
@@ -146,7 +149,7 @@ export default function DashboardPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           {quickLinks.map(({ icon: Icon, title, description, href, color, gradient }) => (
             <Link key={title} href={href} className="group">
-              <Card className={`hover:shadow-md transition-all h-full border bg-gradient-to-br ${gradient}`}>
+              <Card className={`hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 h-full border bg-gradient-to-br ${gradient}`}>
                 <CardHeader className="pb-2">
                   <Icon className={`h-8 w-8 ${color}`} />
                   <CardTitle className="text-base mt-2">{title}</CardTitle>
@@ -161,7 +164,7 @@ export default function DashboardPage() {
 
           {/* My Pets management tile */}
           <Link href="/pet/my" className="group">
-            <Card className="hover:shadow-md transition-all h-full border border-dashed bg-gradient-to-br from-[#FFD966]/15 to-[#FFAA62]/15 hover:border-[#FFAA62]/50">
+            <Card className="hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 h-full border border-dashed bg-gradient-to-br from-[#FFD966]/15 to-[#FFAA62]/15 hover:border-[#FFAA62]/50">
               <CardHeader className="pb-2">
                 <BookOpen className="h-8 w-8 text-[#FFAA62]" />
                 <CardTitle className="text-base mt-2">
