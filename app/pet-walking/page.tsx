@@ -37,6 +37,7 @@ interface Walker {
   pet_types: string | null;
   bio: string | null;
   primaryImage?: string | null;
+  images?: string[];
   activeOffers?: VendorOffer[];
 }
 
@@ -52,6 +53,78 @@ const TIME_SLOTS = [
 ];
 
 type BookingStep = 1 | 2 | 3;
+
+function ImageCarousel({ images, alt }: { images: string[]; alt: string }) {
+  const [current, setCurrent] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const timer = setInterval(() => setCurrent((c) => (c + 1) % images.length), 5000);
+    return () => clearInterval(timer);
+  }, [images.length]);
+
+  function prev(e: React.MouseEvent) {
+    e.stopPropagation();
+    setCurrent((c) => (c - 1 + images.length) % images.length);
+  }
+
+  function next(e: React.MouseEvent) {
+    e.stopPropagation();
+    setCurrent((c) => (c + 1) % images.length);
+  }
+
+  return (
+    <div
+      className="relative w-full h-full"
+      onTouchStart={(e) => setTouchStart(e.touches[0].clientX)}
+      onTouchEnd={(e) => {
+        if (touchStart === null) return;
+        const delta = touchStart - e.changedTouches[0].clientX;
+        if (Math.abs(delta) > 40) {
+          delta > 0
+            ? setCurrent((c) => (c + 1) % images.length)
+            : setCurrent((c) => (c - 1 + images.length) % images.length);
+        }
+        setTouchStart(null);
+      }}
+    >
+      {images.map((src, i) => (
+        <img
+          key={src}
+          src={src}
+          alt={alt}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${i === current ? "opacity-100" : "opacity-0"}`}
+        />
+      ))}
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={prev}
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60 text-lg leading-none"
+          >
+            ‹
+          </button>
+          <button
+            onClick={next}
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60 text-lg leading-none"
+          >
+            ›
+          </button>
+          <div className="absolute bottom-2 right-2 z-10 flex gap-1">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                onClick={(e) => { e.stopPropagation(); setCurrent(i); }}
+                className={`h-1.5 rounded-full transition-all duration-300 ${i === current ? "w-4 bg-white" : "w-1.5 bg-white/60"}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 function WalkBookingModal({ walker, open, onClose }: {
   walker: Walker; open: boolean; onClose: () => void;
@@ -279,16 +352,18 @@ function WalkerCard({ walker }: { walker: Walker }) {
   return (
     <>
       <div className="rounded-2xl border bg-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
-        <div className="h-36 bg-gradient-to-br from-[#FFAA62]/20 to-[#FFD966]/20 flex items-center justify-center overflow-hidden relative">
-          {walker.primaryImage ? (
-            <img src={walker.primaryImage} alt={walker.full_name} className="w-full h-full object-cover" />
+        <div className="h-36 relative overflow-hidden bg-gradient-to-br from-[#FFAA62]/20 to-[#FFD966]/20">
+          {(walker.images?.length ?? 0) > 0 ? (
+            <ImageCarousel images={walker.images!} alt={walker.full_name} />
           ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFAA62] to-[#FF8C42] text-white text-2xl font-bold shadow-lg ring-4 ring-white/30">
-              {initials}
+            <div className="flex h-full w-full items-center justify-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#FFAA62] to-[#FF8C42] text-white text-2xl font-bold shadow-lg ring-4 ring-white/30">
+                {initials}
+              </div>
             </div>
           )}
           {(walker.activeOffers?.length ?? 0) > 0 && (
-            <div className="absolute bottom-2 left-2 flex flex-wrap gap-1">
+            <div className="absolute bottom-2 left-2 z-20 flex flex-wrap gap-1">
               {walker.activeOffers!.slice(0, 1).map((offer) => (
                 <span key={offer.id} className="inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-sm px-2.5 py-0.5 text-xs font-semibold text-white">
                   <Tag className="h-3 w-3" />
@@ -362,9 +437,10 @@ export default function PetWalkingPage() {
       const [{ data: imagesData }, { data: offersData }] = await Promise.all([
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase.from("vendor_images") as any)
-          .select("vendor_id, image_url, is_primary")
+          .select("vendor_id, image_url, is_primary, display_order")
           .eq("vendor_type", "walking")
-          .in("vendor_id", walkerIds),
+          .in("vendor_id", walkerIds)
+          .order("display_order"),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase.from("vendor_offers") as any)
           .select("id, vendor_id, coupon_code, title, discount_type, discount_value, min_amount, valid_until")
@@ -373,11 +449,14 @@ export default function PetWalkingPage() {
           .in("vendor_id", walkerIds),
       ]);
 
-      const imageMap: Record<string, string | null> = {};
+      const imagesMap: Record<string, string[]> = {};
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (imagesData as any[] ?? []).forEach((img: any) => {
-        if (img.is_primary || !imageMap[img.vendor_id]) {
-          imageMap[img.vendor_id] = img.image_url;
+        if (!imagesMap[img.vendor_id]) imagesMap[img.vendor_id] = [];
+        if (img.is_primary) {
+          imagesMap[img.vendor_id].unshift(img.image_url);
+        } else {
+          imagesMap[img.vendor_id].push(img.image_url);
         }
       });
 
@@ -390,7 +469,7 @@ export default function PetWalkingPage() {
 
       setWalkers(walkerList.map((w) => ({
         ...w,
-        primaryImage: imageMap[w.id] ?? null,
+        images: imagesMap[w.id] ?? [],
         activeOffers: offersMap[w.id] ?? [],
       })));
       setLoading(false);
