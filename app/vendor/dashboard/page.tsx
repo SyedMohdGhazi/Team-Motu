@@ -369,11 +369,16 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
   async function handleDelete() {
     if (!service) return;
     setLoading(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from("services") as any).update({ is_active: false }).eq("id", service.id);
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch("/api/vendor/services", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token ?? ""}` },
+      body: JSON.stringify({ id: service.id, is_active: false }),
+    });
+    const json = await res.json();
     setLoading(false);
-    if (error) {
-      toast({ title: "Failed to delete service", description: error.message, variant: "destructive" });
+    if (!res.ok) {
+      toast({ title: "Failed to delete service", description: json.error, variant: "destructive" });
       setConfirmDelete(false);
     } else {
       toast({ title: "Service removed" });
