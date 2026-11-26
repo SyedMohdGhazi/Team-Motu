@@ -157,9 +157,25 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
   const [petType, setPetType] = useState("both");
   const [serviceType, setServiceType] = useState("both");
   const [category, setCategory] = useState("bath");
+  const [includedServices, setIncludedServices] = useState<string[]>([]);
+  const [otherDesc, setOtherDesc] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
+
+  const otherWordCount = otherDesc.trim() ? otherDesc.trim().split(/\s+/).length : 0;
+
+  function buildDescription() {
+    if (category === "full_package") return includedServices.length > 0 ? includedServices.join(", ") : null;
+    if (category === "other") return otherDesc.trim() || null;
+    return null;
+  }
+
+  function handleClose() {
+    onClose();
+    setName(""); setPrice(""); setDuration(""); setCategory("bath");
+    setIncludedServices([]); setOtherDesc("");
+  }
 
   async function handleAdd() {
     if (!name || !price || !duration) return;
@@ -168,6 +184,7 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
     const { error } = await (supabase.from("services") as any).insert({
       vendor_id: vendorId, name, price: parseFloat(price),
       duration_minutes: parseInt(duration), category,
+      description: buildDescription(),
       pet_type: petType as "dog" | "cat" | "both",
       service_type: serviceType as "home" | "clinic" | "both",
     });
@@ -176,13 +193,12 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
       toast({ title: "Failed to add service", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Service added!" });
-      onAdded(); onClose();
-      setName(""); setPrice(""); setDuration("");
+      onAdded(); handleClose();
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader><DialogTitle>Add Service</DialogTitle></DialogHeader>
         <div className="grid gap-4 py-2">
@@ -192,14 +208,43 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
           </div>
           <div className="grid gap-1.5">
             <Label>Category</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select value={category} onValueChange={(v) => { setCategory(v); setIncludedServices([]); setOtherDesc(""); }}>
+              <SelectTrigger className="capitalize"><SelectValue>{formatCategory(category)}</SelectValue></SelectTrigger>
               <SelectContent>
                 {["bath","haircut","nail_trim","ear_cleaning","full_package","other"].map((c) => (
-                  <SelectItem key={c} value={c} className="capitalize">{c.replace("_"," ")}</SelectItem>
+                  <SelectItem key={c} value={c} className="capitalize">{formatCategory(c)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {category === "full_package" && (
+              <div className="rounded-lg border bg-muted/40 p-3 grid gap-2 mt-1">
+                <p className="text-xs font-medium text-muted-foreground">What's included in this package?</p>
+                {FULL_PACKAGE_OPTIONS.map((opt) => (
+                  <label key={opt} className="flex items-center gap-2 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      className="accent-primary h-4 w-4"
+                      checked={includedServices.includes(opt)}
+                      onChange={(e) => setIncludedServices((prev) => e.target.checked ? [...prev, opt] : prev.filter((s) => s !== opt))}
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            )}
+            {category === "other" && (
+              <div className="grid gap-1 mt-1">
+                <Input
+                  placeholder="Describe this service (max 20 words)…"
+                  value={otherDesc}
+                  onChange={(e) => setOtherDesc(e.target.value)}
+                  className={otherWordCount > 20 ? "border-red-500" : ""}
+                />
+                <p className={`text-xs text-right ${otherWordCount > 20 ? "text-red-500 font-semibold" : "text-muted-foreground"}`}>
+                  {otherWordCount}/20 words
+                </p>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
@@ -237,8 +282,8 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleAdd} disabled={loading || !name || !price || !duration}>
+          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleAdd} disabled={loading || !name || !price || !duration || (category === "other" && otherWordCount > 20)}>
             {loading && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Add service
           </Button>
         </DialogFooter>
@@ -247,7 +292,10 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
   );
 }
 
-interface ServiceRow { id: string; name: string; price: number; duration_minutes: number; pet_type: string; service_type: string; category: string; }
+interface ServiceRow { id: string; name: string; price: number; duration_minutes: number; pet_type: string; service_type: string; category: string; description: string | null; }
+
+const FULL_PACKAGE_OPTIONS = ["Bath", "Haircut", "Nail Trim", "Ear Cleaning"] as const;
+function formatCategory(c: string) { return c.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()); }
 
 function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
   service: ServiceRow | null; open: boolean; onClose: () => void;
@@ -259,22 +307,46 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
   const [petType, setPetType] = useState(service?.pet_type ?? "both");
   const [serviceType, setServiceType] = useState(service?.service_type ?? "both");
   const [category, setCategory] = useState(service?.category ?? "bath");
+  const [includedServices, setIncludedServices] = useState<string[]>([]);
+  const [otherDesc, setOtherDesc] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
+
+  const otherWordCount = otherDesc.trim() ? otherDesc.trim().split(/\s+/).length : 0;
 
   useEffect(() => {
     if (service) {
       setName(service.name); setPrice(service.price.toString());
       setDuration(service.duration_minutes.toString()); setPetType(service.pet_type);
       setServiceType(service.service_type); setCategory(service.category);
+      if (service.category === "full_package" && service.description) {
+        setIncludedServices(service.description.split(", ").filter(Boolean));
+      } else {
+        setIncludedServices([]);
+      }
+      if (service.category === "other" && service.description) {
+        setOtherDesc(service.description);
+      } else {
+        setOtherDesc("");
+      }
     }
   }, [service]);
+
+  function buildDescription() {
+    if (category === "full_package") return includedServices.length > 0 ? includedServices.join(", ") : null;
+    if (category === "other") return otherDesc.trim() || null;
+    return null;
+  }
 
   async function handleSave() {
     if (!service || !name || !price || !duration) return;
     setLoading(true);
-    const updated = { name, price: parseFloat(price), duration_minutes: parseInt(duration), category, pet_type: petType as "dog"|"cat"|"both", service_type: serviceType as "home"|"clinic"|"both" };
+    const updated = {
+      name, price: parseFloat(price), duration_minutes: parseInt(duration), category,
+      description: buildDescription(),
+      pet_type: petType as "dog"|"cat"|"both", service_type: serviceType as "home"|"clinic"|"both",
+    };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from("services") as any).update(updated).eq("id", service.id);
     setLoading(false);
@@ -309,14 +381,43 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
           </div>
           <div className="grid gap-1.5">
             <Label>Category</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select value={category} onValueChange={(v) => { setCategory(v); setIncludedServices([]); setOtherDesc(""); }}>
+              <SelectTrigger className="capitalize"><SelectValue>{formatCategory(category)}</SelectValue></SelectTrigger>
               <SelectContent>
                 {["bath","haircut","nail_trim","ear_cleaning","full_package","other"].map((c) => (
-                  <SelectItem key={c} value={c} className="capitalize">{c.replace("_"," ")}</SelectItem>
+                  <SelectItem key={c} value={c} className="capitalize">{formatCategory(c)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {category === "full_package" && (
+              <div className="rounded-lg border bg-muted/40 p-3 grid gap-2 mt-1">
+                <p className="text-xs font-medium text-muted-foreground">What's included in this package?</p>
+                {FULL_PACKAGE_OPTIONS.map((opt) => (
+                  <label key={opt} className="flex items-center gap-2 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      className="accent-primary h-4 w-4"
+                      checked={includedServices.includes(opt)}
+                      onChange={(e) => setIncludedServices((prev) => e.target.checked ? [...prev, opt] : prev.filter((s) => s !== opt))}
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            )}
+            {category === "other" && (
+              <div className="grid gap-1 mt-1">
+                <Input
+                  placeholder="Describe this service (max 20 words)…"
+                  value={otherDesc}
+                  onChange={(e) => setOtherDesc(e.target.value)}
+                  className={otherWordCount > 20 ? "border-red-500" : ""}
+                />
+                <p className={`text-xs text-right ${otherWordCount > 20 ? "text-red-500 font-semibold" : "text-muted-foreground"}`}>
+                  {otherWordCount}/20 words
+                </p>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
@@ -358,7 +459,7 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
             <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete service
           </Button>
           <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
-          <Button onClick={handleSave} disabled={loading || !name || !price || !duration}>
+          <Button onClick={handleSave} disabled={loading || !name || !price || !duration || (category === "other" && otherWordCount > 20)}>
             {loading && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Save changes
           </Button>
         </DialogFooter>
@@ -718,11 +819,17 @@ export default function VendorDashboardPage() {
               <div className="grid gap-3">
                 {services.map((s) => (
                   <div key={s.id} className="flex items-center justify-between rounded-xl border p-4">
-                    <div>
-                      <p className="font-medium">{s.name}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium">{s.name}</p>
+                        <span className="text-xs rounded-full bg-muted px-2 py-0.5 text-muted-foreground capitalize">{formatCategory(s.category)}</span>
+                      </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{s.duration_minutes} min · {s.pet_type} · {s.service_type} service</p>
+                      {s.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 italic">{s.description}</p>
+                      )}
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 shrink-0 ml-3">
                       <span className="font-bold text-primary">₹{s.price}</span>
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingService(s)}>
                         <Pencil className="h-3.5 w-3.5" />
@@ -869,7 +976,11 @@ export default function VendorDashboardPage() {
           </TabsContent>
         </Tabs>
       </main>
-      {vendorId && <AddServiceDialog vendorId={vendorId} open={addServiceOpen} onClose={() => setAddServiceOpen(false)} onAdded={() => { /* refetch services */ }} />}
+      {vendorId && <AddServiceDialog vendorId={vendorId} open={addServiceOpen} onClose={() => setAddServiceOpen(false)} onAdded={async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data } = await (supabase.from("services") as any).select("*").eq("vendor_id", vendorId).eq("is_active", true);
+        setServices(data ?? []);
+      }} />}
 
       <EditServiceDialog
         service={editingService}
