@@ -202,7 +202,7 @@ function BookingModal({ vendor, serviceType, open, onClose }: {
   );
 }
 
-function VendorCard({ vendor, activeTab, isOwnVendor }: { vendor: Vendor; activeTab: "home" | "clinic"; isOwnVendor: boolean }) {
+function VendorCard({ vendor, activeTab, isOwnVendor, isVendor }: { vendor: Vendor; activeTab: "home" | "clinic"; isOwnVendor: boolean; isVendor: boolean }) {
   const [bookingOpen, setBookingOpen] = useState(false);
   const priceFrom = vendor.services?.length ? Math.min(...vendor.services.map((s) => s.price)) : null;
 
@@ -247,13 +247,15 @@ function VendorCard({ vendor, activeTab, isOwnVendor }: { vendor: Vendor; active
             </span>
             {isOwnVendor ? (
               <Button size="sm" variant="outline" disabled>Your business</Button>
+            ) : isVendor ? (
+              <Button size="sm" variant="outline" disabled>Not available for vendors</Button>
             ) : (
               <Button size="sm" onClick={() => setBookingOpen(true)} disabled={!vendor.services?.length}>Book now</Button>
             )}
           </div>
         </CardContent>
       </Card>
-      {bookingOpen && !isOwnVendor && (
+      {bookingOpen && !isOwnVendor && !isVendor && (
         <BookingModal vendor={vendor} serviceType={activeTab} open={bookingOpen} onClose={() => setBookingOpen(false)} />
       )}
     </>
@@ -268,6 +270,7 @@ export default function GroomingPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -282,6 +285,11 @@ export default function GroomingPage() {
           .order("rating", { ascending: false }),
       ]);
       setCurrentUserId(user?.id ?? null);
+      if (user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: profile } = await (supabase.from("users") as any).select("role").eq("id", user.id).single();
+        setUserRole(profile?.role ?? null);
+      }
       setVendors((data as Vendor[]) ?? []);
       setLoading(false);
     }
@@ -343,7 +351,7 @@ export default function GroomingPage() {
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {filtered.map((v) => <VendorCard key={v.id} vendor={v} activeTab={tab} isOwnVendor={currentUserId === v.user_id} />)}
+                  {filtered.map((v) => <VendorCard key={v.id} vendor={v} activeTab={tab} isOwnVendor={currentUserId === v.user_id} isVendor={userRole === "vendor"} />)}
                 </div>
               )}
             </TabsContent>

@@ -202,7 +202,7 @@ function WalkBookingModal({ walker, open, onClose }: {
   );
 }
 
-function WalkerCard({ walker }: { walker: Walker }) {
+function WalkerCard({ walker, isOwnWalker, isVendor }: { walker: Walker; isOwnWalker: boolean; isVendor: boolean }) {
   const [bookingOpen, setBookingOpen] = useState(false);
   const initials = walker.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   const petLabel = walker.pet_types ? (PET_TYPE_LABEL[walker.pet_types] ?? walker.pet_types) : null;
@@ -238,14 +238,15 @@ function WalkerCard({ walker }: { walker: Walker }) {
 
           <Button
             onClick={() => setBookingOpen(true)}
-            className="mt-1 w-full bg-gradient-to-r from-amber-500 to-orange-400 text-white hover:opacity-90"
+            disabled={isOwnWalker || isVendor}
+            className="mt-1 w-full bg-gradient-to-r from-amber-500 to-orange-400 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Book a walk
+            {isOwnWalker ? "Your listing" : isVendor ? "Not available for vendors" : "Book a walk"}
           </Button>
         </div>
       </div>
 
-      {bookingOpen && (
+      {bookingOpen && !isOwnWalker && !isVendor && (
         <WalkBookingModal walker={walker} open={bookingOpen} onClose={() => setBookingOpen(false)} />
       )}
     </>
@@ -256,16 +257,27 @@ export default function PetWalkingPage() {
   const [walkers, setWalkers] = useState<Walker[]>([]);
   const [petFilter, setPetFilter] = useState<"all" | "dogs" | "cats">("all");
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase.from("pet_walkers") as any)
-        .select("id, user_id, full_name, phone, service_area, pet_types, bio")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
+      const [{ data: { user } }, { data }] = await Promise.all([
+        supabase.auth.getUser(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase.from("pet_walkers") as any)
+          .select("id, user_id, full_name, phone, service_area, pet_types, bio")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false }),
+      ]);
+      setCurrentUserId(user?.id ?? null);
+      if (user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: profile } = await (supabase.from("users") as any).select("role").eq("id", user.id).single();
+        setUserRole(profile?.role ?? null);
+      }
       setWalkers((data as Walker[]) ?? []);
       setLoading(false);
     }
@@ -315,7 +327,7 @@ export default function PetWalkingPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {filtered.map((w) => <WalkerCard key={w.id} walker={w} />)}
+            {filtered.map((w) => <WalkerCard key={w.id} walker={w} isOwnWalker={currentUserId === w.user_id} isVendor={userRole === "vendor"} />)}
           </div>
         )}
       </main>
