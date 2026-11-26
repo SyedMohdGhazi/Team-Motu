@@ -435,16 +435,6 @@ export default function VendorDashboardPage() {
                   Walk Requests {walkPendingCount > 0 && <span className="ml-1.5 rounded-full bg-amber-500 text-white text-xs px-1.5 py-0.5">{walkPendingCount}</span>}
                 </TabsTrigger>
               )}
-              {hasAnyProfile && (
-                <>
-                  <TabsTrigger value="photos" className="shrink-0 px-3 gap-1.5">
-                    <ImageIcon className="h-3.5 w-3.5" /> Photos
-                  </TabsTrigger>
-                  <TabsTrigger value="offers" className="shrink-0 px-3 gap-1.5">
-                    <Tag className="h-3.5 w-3.5" /> Offers
-                  </TabsTrigger>
-                </>
-              )}
               <TabsTrigger value="profile" className="shrink-0 px-3">Business Profile</TabsTrigger>
             </TabsList>
           </div>
