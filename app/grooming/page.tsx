@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import {
   Star, MapPin, Clock, CheckCircle2, Home, Building2,
-  SlidersHorizontal, ChevronRight, ChevronLeft, Loader2, ExternalLink,
+  SlidersHorizontal, ChevronRight, ChevronLeft, Loader2, ExternalLink, ArrowLeft,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -307,6 +308,9 @@ export default function GroomingPage() {
     <>
       <Navbar />
       <main className="container mx-auto max-w-3xl px-4 py-6">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
+          <ArrowLeft className="h-4 w-4" /> Back to home
+        </Link>
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Grooming Spas & Salons</h1>
           <p className="text-sm text-muted-foreground mt-1">Verified groomers near Dehradun</p>
