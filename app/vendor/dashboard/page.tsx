@@ -970,7 +970,16 @@ export default function VendorDashboardPage() {
                     </div>
                     <div className="grid gap-1.5">
                       <Label>Email</Label>
-                      <Input type="email" value={profile.email} onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))} />
+                      <Input
+                        type="email"
+                        value={profile.email}
+                        onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))}
+                        disabled={!!vendorId}
+                        className={vendorId ? "opacity-60 cursor-not-allowed bg-muted" : ""}
+                      />
+                      {vendorId && (
+                        <p className="text-xs text-muted-foreground">Email cannot be changed after registration.</p>
+                      )}
                     </div>
                   </div>
                   <div className="grid gap-1.5">
