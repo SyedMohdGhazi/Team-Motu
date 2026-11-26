@@ -299,7 +299,7 @@ function formatCategory(c: string) { return c.replace(/_/g, " ").replace(/\b\w/g
 
 function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
   service: ServiceRow | null; open: boolean; onClose: () => void;
-  onEdited: (s: ServiceRow) => void; onDeleted: (id: string) => void;
+  onEdited: (s: ServiceRow) => void; onDeleted: () => void;
 }) {
   const [name, setName] = useState(service?.name ?? "");
   const [price, setPrice] = useState(service?.price?.toString() ?? "");
@@ -309,6 +309,7 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
   const [category, setCategory] = useState(service?.category ?? "bath");
   const [includedServices, setIncludedServices] = useState<string[]>([]);
   const [otherDesc, setOtherDesc] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
@@ -320,6 +321,7 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
       setName(service.name); setPrice(service.price.toString());
       setDuration(service.duration_minutes.toString()); setPetType(service.pet_type);
       setServiceType(service.service_type); setCategory(service.category);
+      setConfirmDelete(false);
       if (service.category === "full_package" && service.description) {
         setIncludedServices(service.description.split(", ").filter(Boolean));
       } else {
@@ -339,6 +341,11 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
     return null;
   }
 
+  function handleClose() {
+    setConfirmDelete(false);
+    onClose();
+  }
+
   async function handleSave() {
     if (!service || !name || !price || !duration) return;
     setLoading(true);
@@ -355,23 +362,28 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
     } else {
       toast({ title: "Service updated!" });
       onEdited({ ...service, ...updated });
-      onClose();
+      handleClose();
     }
   }
 
   async function handleDelete() {
-    if (!service || !confirm(`Delete "${service.name}"? This cannot be undone.`)) return;
+    if (!service) return;
     setLoading(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from("services") as any).update({ is_active: false }).eq("id", service.id);
+    const { error } = await (supabase.from("services") as any).update({ is_active: false }).eq("id", service.id);
     setLoading(false);
-    toast({ title: "Service removed" });
-    onDeleted(service.id);
-    onClose();
+    if (error) {
+      toast({ title: "Failed to delete service", description: error.message, variant: "destructive" });
+      setConfirmDelete(false);
+    } else {
+      toast({ title: "Service removed" });
+      onDeleted();
+      handleClose();
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader><DialogTitle>Edit Service</DialogTitle></DialogHeader>
         <div className="grid gap-4 py-2">
@@ -453,12 +465,26 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
               </Select>
             </div>
           </div>
+          {confirmDelete && (
+            <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 dark:border-red-800 p-3 grid gap-2">
+              <p className="text-sm font-semibold text-red-700 dark:text-red-400">Delete &ldquo;{service?.name}&rdquo;?</p>
+              <p className="text-xs text-red-600 dark:text-red-500">This action cannot be undone.</p>
+              <div className="flex gap-2 justify-end mt-1">
+                <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)} disabled={loading}>Keep it</Button>
+                <Button size="sm" variant="destructive" onClick={handleDelete} disabled={loading}>
+                  {loading && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />} Yes, delete
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="destructive" size="sm" onClick={handleDelete} disabled={loading} className="sm:mr-auto">
-            <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete service
-          </Button>
-          <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+          {!confirmDelete && (
+            <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)} disabled={loading} className="sm:mr-auto">
+              <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete service
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleClose} disabled={loading}>Cancel</Button>
           <Button onClick={handleSave} disabled={loading || !name || !price || !duration || (category === "other" && otherWordCount > 20)}>
             {loading && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Save changes
           </Button>
@@ -987,7 +1013,12 @@ export default function VendorDashboardPage() {
         open={!!editingService}
         onClose={() => setEditingService(null)}
         onEdited={(updated) => setServices((prev) => prev.map((s) => s.id === updated.id ? updated : s))}
-        onDeleted={(id) => setServices((prev) => prev.filter((s) => s.id !== id))}
+        onDeleted={async () => {
+          if (!vendorId) return;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data } = await (supabase.from("services") as any).select("*").eq("vendor_id", vendorId).eq("is_active", true);
+          setServices(data ?? []);
+        }}
       />
 
       <RejectDialog
