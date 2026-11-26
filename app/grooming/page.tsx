@@ -192,7 +192,7 @@ function BookingModal({ vendor, serviceType, open, onClose }: {
               Next <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={handleConfirm} disabled={loading} className="bg-green-600 hover:bg-green-700">
+            <Button onClick={handleConfirm} disabled={loading} className="bg-primary hover:bg-primary/90">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
               Confirm booking
             </Button>

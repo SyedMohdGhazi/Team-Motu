@@ -4,66 +4,66 @@
 
 @layer base {
   :root {
-    /* JeevJantu Palette — Playful & Energetic */
-    --background: 39 100% 96%;          /* Vanilla Cream #FFF8EB */
-    --foreground: 143 12% 24%;          /* Deep Charcoal #35443B */
+    /* Team Motu — Violet & Warm palette */
+    --background: 0 0% 99%;
+    --foreground: 240 10% 10%;
 
-    --card: 0 0% 100%;                  /* White cards for contrast */
-    --card-foreground: 143 12% 24%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 143 12% 24%;
+    --popover-foreground: 240 10% 10%;
 
-    --primary: 150 49% 59%;             /* Fresh Mint Green #62C995 */
-    --primary-foreground: 0 0% 100%;    /* White text on primary */
+    --primary: 262 83% 58%;              /* Violet #7C3AED */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 141 51% 82%;           /* Soft Green #B8E8C9 */
-    --secondary-foreground: 143 12% 24%;
+    --secondary: 262 55% 93%;            /* Soft lavender */
+    --secondary-foreground: 262 40% 30%;
 
-    --muted: 141 35% 93%;               /* Very light green tint */
-    --muted-foreground: 143 10% 48%;
+    --muted: 262 20% 95%;
+    --muted-foreground: 240 8% 50%;
 
-    --accent: 28 100% 69%;              /* Happy Orange #FFAA62 */
-    --accent-foreground: 143 12% 24%;
+    --accent: 28 100% 65%;               /* Warm orange */
+    --accent-foreground: 240 10% 10%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 141 30% 87%;
-    --input: 141 30% 87%;
-    --ring: 150 49% 59%;
+    --border: 240 8% 90%;
+    --input: 240 8% 90%;
+    --ring: 262 83% 58%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;
   }
 
   .dark {
-    --background: 143 20% 9%;           /* Deep forest */
-    --foreground: 141 40% 92%;          /* Light mint cream */
+    --background: 240 10% 8%;
+    --foreground: 240 20% 92%;
 
-    --card: 143 20% 13%;
-    --card-foreground: 141 40% 92%;
+    --card: 240 10% 12%;
+    --card-foreground: 240 20% 92%;
 
-    --popover: 143 20% 13%;
-    --popover-foreground: 141 40% 92%;
+    --popover: 240 10% 12%;
+    --popover-foreground: 240 20% 92%;
 
-    --primary: 150 46% 53%;             /* Mint Green (slightly deeper in dark) */
+    --primary: 263 70% 68%;              /* Lighter violet for dark */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 143 20% 19%;
-    --secondary-foreground: 141 40% 92%;
+    --secondary: 240 10% 18%;
+    --secondary-foreground: 240 20% 92%;
 
-    --muted: 143 20% 17%;
-    --muted-foreground: 141 25% 58%;
+    --muted: 240 10% 16%;
+    --muted-foreground: 240 10% 55%;
 
-    --accent: 28 90% 62%;               /* Happy Orange (slightly muted in dark) */
-    --accent-foreground: 143 12% 24%;
+    --accent: 28 90% 62%;
+    --accent-foreground: 240 10% 10%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 63% 31%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 143 20% 21%;
-    --input: 143 20% 21%;
-    --ring: 150 46% 53%;
+    --border: 240 10% 20%;
+    --input: 240 10% 20%;
+    --ring: 263 70% 68%;
   }
 }
 

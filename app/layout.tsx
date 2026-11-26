@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { InstallBanner } from "@/components/install-banner";
+import { SplashScreen } from "@/components/splash-screen";
 import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -38,6 +39,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <SplashScreen />
           {children}
           <Toaster />
           <InstallBanner />
