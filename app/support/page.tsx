@@ -17,7 +17,9 @@ const faqs = [
     a: "Open 'My Bookings' from the top-right menu and contact the vendor directly. Cancellation policies vary by vendor.",
   },
   {
-    q: "I'm a vendor — how do I list my services?",
+    q: "How do I change my registered email address?",
+    a: "Email addresses cannot be changed self-service. Please reach out to our support team with your current email address, the new email address you'd like to use, and a brief reason for the change. We'll verify and update it for you.",
+  },
     a: "Sign in with your vendor account and go to Vendor Dashboard. You can add, edit and manage your services and business profile from there.",
   },
 ];
