@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Scissors, PawPrint, CalendarDays, ArrowRight, Plus, BookOpen } from "lucide-react";
+import { Scissors, PawPrint, CalendarDays, ArrowRight, Plus, BookOpen, LifeBuoy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface UserPet {
@@ -172,6 +172,20 @@ export default function DashboardPage() {
                 <p className="text-sm text-muted-foreground">
                   {pets.length > 0 ? "Manage profiles & health info" : "Save your pet's profile"}
                 </p>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Support tile */}
+          <Link href="/support" className="group">
+            <Card className="hover:shadow-md transition-all h-full border border-dashed bg-gradient-to-br from-primary/5 to-primary/0 hover:border-primary/40">
+              <CardHeader className="pb-2">
+                <LifeBuoy className="h-8 w-8 text-primary" />
+                <CardTitle className="text-base mt-2">Support</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Get help or report an issue</p>
                 <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
               </CardContent>
             </Card>

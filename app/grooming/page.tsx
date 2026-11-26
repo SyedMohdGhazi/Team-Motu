@@ -3,13 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import {
   Star, MapPin, Clock, Home, Building2,
-  SlidersHorizontal, Loader2, ExternalLink, ArrowLeft,
+  SlidersHorizontal, Loader2, ExternalLink, ArrowLeft, ArrowRight,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -29,57 +28,61 @@ interface Vendor {
 
 function VendorCard({ vendor, isOwnVendor }: { vendor: Vendor; isOwnVendor: boolean }) {
   const priceFrom = vendor.services?.length ? Math.min(...vendor.services.map((s) => s.price)) : null;
+  const href = isOwnVendor ? "/vendor/dashboard" : `/grooming/${vendor.id}`;
 
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
-      <div className="h-32 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-4xl">🐾</div>
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <h3 className="font-bold text-base">{vendor.business_name}</h3>
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-              <MapPin className="h-3 w-3" />{vendor.address ?? vendor.city ?? "Dehradun"}
-            </p>
+    <Link href={href} className="block group">
+      <Card className="overflow-hidden hover:shadow-md transition-all duration-200 group-hover:-translate-y-0.5 cursor-pointer">
+        <div className="h-32 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-4xl">🐾</div>
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h3 className="font-bold text-base group-hover:text-primary transition-colors">{vendor.business_name}</h3>
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                <MapPin className="h-3 w-3" />{vendor.address ?? vendor.city ?? "Dehradun"}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+              <span className="text-sm font-semibold">{vendor.rating.toFixed(1)}</span>
+              <span className="text-xs text-muted-foreground">({vendor.total_reviews})</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-            <span className="text-sm font-semibold">{vendor.rating.toFixed(1)}</span>
-            <span className="text-xs text-muted-foreground">({vendor.total_reviews})</span>
+        </CardHeader>
+        <CardContent className="pt-0 grid gap-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {vendor.offers_home_service && <span className="flex items-center gap-1"><Home className="h-3.5 w-3.5 text-primary" /> Home</span>}
+            {vendor.offers_clinic_visit && <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 text-primary" /> Clinic</span>}
+            <span className="flex items-center gap-1 ml-auto"><Clock className="h-3.5 w-3.5" /> 30–90 min</span>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0 grid gap-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {vendor.offers_home_service && <span className="flex items-center gap-1"><Home className="h-3.5 w-3.5 text-primary" /> Home</span>}
-          {vendor.offers_clinic_visit && <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 text-primary" /> Clinic</span>}
-          <span className="flex items-center gap-1 ml-auto"><Clock className="h-3.5 w-3.5" /> 30–90 min</span>
-        </div>
-        {vendor.offers_clinic_visit && vendor.maps_url && (
-          <a
-            href={vendor.maps_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs text-primary hover:underline w-fit"
-          >
-            <MapPin className="h-3.5 w-3.5" /> View on Maps <ExternalLink className="h-3 w-3" />
-          </a>
-        )}
-        <div className="flex items-center justify-between pt-1 border-t">
-          <span className="text-sm">
-            {priceFrom
-              ? <>From <strong className="text-primary">₹{priceFrom}</strong></>
-              : <span className="text-muted-foreground text-xs">No services listed yet</span>}
-          </span>
-          {isOwnVendor ? (
-            <Button size="sm" variant="outline" disabled>Your business</Button>
-          ) : (
-            <Link href={`/grooming/${vendor.id}`}>
-              <Button size="sm">View details</Button>
-            </Link>
+          {vendor.offers_clinic_visit && vendor.maps_url && (
+            <a
+              href={vendor.maps_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 text-xs text-primary hover:underline w-fit"
+            >
+              <MapPin className="h-3.5 w-3.5" /> View on Maps <ExternalLink className="h-3 w-3" />
+            </a>
           )}
-        </div>
-      </CardContent>
-    </Card>
+          <div className="flex items-center justify-between pt-1 border-t">
+            <span className="text-sm">
+              {priceFrom
+                ? <>From <strong className="text-primary">₹{priceFrom}</strong></>
+                : <span className="text-muted-foreground text-xs">No services listed yet</span>}
+            </span>
+            {isOwnVendor ? (
+              <span className="text-xs text-muted-foreground font-medium">Your business →</span>
+            ) : (
+              <span className="text-xs font-semibold text-primary flex items-center gap-1">
+                View details <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 

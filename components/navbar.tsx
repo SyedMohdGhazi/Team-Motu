@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PawPrint, User, LogOut, LayoutDashboard, Store, ChevronDown } from "lucide-react";
+import { PawPrint, User, LogOut, LayoutDashboard, Store, ChevronDown, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/lib/supabase/client";
@@ -91,13 +91,22 @@ export function Navbar() {
                       <Store className="h-4 w-4" /> Vendor Dashboard
                     </Link>
                   ) : (
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors"
-                    >
-                      <LayoutDashboard className="h-4 w-4" /> Dashboard
-                    </Link>
+                    <>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors"
+                      >
+                        <LayoutDashboard className="h-4 w-4" /> Dashboard
+                      </Link>
+                      <Link
+                        href="/dashboard/bookings"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors"
+                      >
+                        <CalendarDays className="h-4 w-4" /> My Bookings
+                      </Link>
+                    </>
                   )}
                   <div className="border-t my-1" />
                   <button
