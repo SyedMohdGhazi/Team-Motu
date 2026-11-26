@@ -24,6 +24,7 @@ interface Walker {
   service_area: string | null;
   pet_types: string | null;
   bio: string | null;
+  image_url: string | null;
 }
 
 interface UserPet {
@@ -269,10 +270,12 @@ function WalkerCard({ walker, isOwnWalker, isVendor, savedPets }: { walker: Walk
   return (
     <>
       <div className="rounded-2xl border bg-card hover:shadow-md transition-shadow overflow-hidden">
-        <div className="h-24 bg-gradient-to-br from-amber-500/15 to-orange-400/10 flex items-center justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-400 text-white text-xl font-bold shadow-md">
-            {initials}
-          </div>
+        <div className="h-24 overflow-hidden">
+          <img
+            src={walker.image_url || "/images/walker_default.svg"}
+            alt={walker.full_name}
+            className="h-full w-full object-cover"
+          />
         </div>
         <div className="p-4 grid gap-2.5">
           <div>

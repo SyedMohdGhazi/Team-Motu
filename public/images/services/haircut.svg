@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fce7f3"/>
+      <stop offset="100%" stop-color="#ede9fe"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="200" fill="url(#bg)"/>
+
+  <!-- Dog body -->
+  <ellipse cx="148" cy="152" rx="50" ry="34" fill="#fcd34d"/>
+  <!-- Neck -->
+  <rect x="160" y="132" width="28" height="24" rx="12" fill="#fcd34d"/>
+  <!-- Dog head -->
+  <circle cx="174" cy="104" r="36" fill="#fcd34d"/>
+  <!-- Floppy ears -->
+  <ellipse cx="143" cy="116" rx="16" ry="26" fill="#f59e0b" transform="rotate(-8 143 116)"/>
+  <ellipse cx="205" cy="116" rx="16" ry="26" fill="#f59e0b" transform="rotate(8 205 116)"/>
+  <ellipse cx="143" cy="116" rx="10" ry="17" fill="#fde68a" transform="rotate(-8 143 116)"/>
+  <ellipse cx="205" cy="116" rx="10" ry="17" fill="#fde68a" transform="rotate(8 205 116)"/>
+  <!-- Eyes -->
+  <circle cx="162" cy="97" r="6" fill="#1c1917"/>
+  <circle cx="186" cy="97" r="6" fill="#1c1917"/>
+  <circle cx="163.5" cy="95.5" r="2.2" fill="white"/>
+  <circle cx="187.5" cy="95.5" r="2.2" fill="white"/>
+  <!-- Nose -->
+  <ellipse cx="174" cy="108" rx="7" ry="5" fill="#1c1917"/>
+  <!-- Mouth -->
+  <path d="M166 115 Q174 122 182 115" stroke="#1c1917" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <!-- Fur clippings flying -->
+  <ellipse cx="232" cy="80" rx="9" ry="4" fill="#fde68a" transform="rotate(-35 232 80)" opacity="0.85"/>
+  <ellipse cx="250" cy="92" rx="7" ry="3" fill="#fcd34d" transform="rotate(20 250 92)" opacity="0.8"/>
+  <ellipse cx="240" cy="100" rx="8" ry="3.5" fill="#fde68a" transform="rotate(-8 240 100)" opacity="0.75"/>
+  <ellipse cx="264" cy="74" rx="6" ry="2.5" fill="#fcd34d" transform="rotate(42 264 74)" opacity="0.75"/>
+  <ellipse cx="225" cy="98" rx="5" ry="2" fill="#fde68a" transform="rotate(15 225 98)" opacity="0.65"/>
+
+  <!-- Scissors -->
+  <line x1="278" y1="62" x2="348" y2="122" stroke="#7c3aed" stroke-width="5.5" stroke-linecap="round"/>
+  <line x1="278" y1="122" x2="348" y2="62" stroke="#7c3aed" stroke-width="5.5" stroke-linecap="round"/>
+  <circle cx="313" cy="92" r="9" fill="#6d28d9"/>
+  <circle cx="313" cy="92" r="4.5" fill="#ede9fe"/>
+  <!-- Scissor rings -->
+  <circle cx="278" cy="62" r="13" fill="none" stroke="#7c3aed" stroke-width="4.5"/>
+  <circle cx="278" cy="122" r="13" fill="none" stroke="#7c3aed" stroke-width="4.5"/>
+
+  <text x="200" y="194" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="11" fill="#6d28d9" opacity="0.6" font-weight="700" letter-spacing="1">HAIRCUT &amp; STYLING</text>
+</svg>

@@ -126,6 +126,7 @@ interface VendorProfile {
   phone: string;
   email: string;
   maps_url: string;
+  image_url: string;
   offers_home_service: boolean;
   offers_clinic_visit: boolean;
 }
@@ -506,7 +507,7 @@ export default function VendorDashboardPage() {
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [profile, setProfile] = useState<VendorProfile>({
     business_name: "", description: "", address: "", city: "Dehradun",
-    phone: "", email: "", maps_url: "",
+    phone: "", email: "", maps_url: "", image_url: "",
     offers_home_service: true, offers_clinic_visit: true,
   });
   const [vendorId, setVendorId] = useState<string | null>(null);
@@ -556,6 +557,7 @@ export default function VendorDashboardPage() {
           phone: vendor.phone ?? "",
           email: vendor.email ?? "",
           maps_url: vendor.maps_url ?? "",
+          image_url: vendor.image_url ?? "",
           offers_home_service: vendor.offers_home_service,
           offers_clinic_visit: vendor.offers_clinic_visit,
         });
@@ -612,6 +614,7 @@ export default function VendorDashboardPage() {
       phone: profile.phone || null,
       email: profile.email || null,
       maps_url: profile.maps_url || null,
+      image_url: profile.image_url || null,
       latitude: lat,
       longitude: lng,
       offers_home_service: profile.offers_home_service,
@@ -942,6 +945,23 @@ export default function VendorDashboardPage() {
                   <div className="grid gap-1.5">
                     <Label>Description</Label>
                     <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none" placeholder="Tell customers about your experience and services…" value={profile.description} onChange={(e) => setProfile((p) => ({ ...p, description: e.target.value }))} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label>Business photo URL <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                    <Input
+                      placeholder="https://example.com/your-shop-photo.jpg"
+                      value={profile.image_url}
+                      onChange={(e) => setProfile((p) => ({ ...p, image_url: e.target.value }))}
+                    />
+                    {profile.image_url && (
+                      <img
+                        src={profile.image_url}
+                        alt="Business preview"
+                        className="mt-1 h-28 w-full rounded-lg object-cover border"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    )}
+                    <p className="text-xs text-muted-foreground">Paste a link to your shop photo. Customers will see this on your profile.</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="grid gap-1.5">

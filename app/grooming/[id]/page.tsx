@@ -32,6 +32,7 @@ interface VendorDetail {
   offers_home_service: boolean;
   offers_clinic_visit: boolean;
   maps_url: string | null;
+  image_url: string | null;
 }
 
 interface Service {
@@ -43,6 +44,7 @@ interface Service {
   pet_type: string;
   service_type: string;
   description: string | null;
+  image_url: string | null;
 }
 
 interface UserPet {
@@ -65,6 +67,15 @@ const PET_EMOJI: Record<string, string> = {
 function formatCategory(c: string) {
   return c.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 }
+
+const SERVICE_IMAGE: Record<string, string> = {
+  bath:          "/images/services/bath.svg",
+  haircut:       "/images/services/haircut.svg",
+  nail_trim:     "/images/services/nail_trim.svg",
+  ear_cleaning:  "/images/services/ear_cleaning.svg",
+  full_package:  "/images/services/full_package.svg",
+  other:         "/images/services/other.svg",
+};
 
 function isSlotAvailable(slot: string, selectedDate: string): boolean {
   const today = new Date().toISOString().split("T")[0];
@@ -410,12 +421,12 @@ export default function VendorDetailPage() {
       ] = await Promise.all([
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase.from("grooming_vendors") as any)
-          .select("id, user_id, business_name, description, address, city, rating, total_reviews, offers_home_service, offers_clinic_visit, maps_url")
+          .select("id, user_id, business_name, description, address, city, rating, total_reviews, offers_home_service, offers_clinic_visit, maps_url, image_url")
           .eq("id", id)
           .single(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase.from("services") as any)
-          .select("id, name, price, duration_minutes, category, pet_type, service_type, description")
+          .select("id, name, price, duration_minutes, category, pet_type, service_type, description, image_url")
           .eq("vendor_id", id)
           .eq("is_active", true)
           .order("price", { ascending: true }),
@@ -481,7 +492,13 @@ export default function VendorDetailPage() {
 
         {/* Vendor header */}
         <div className="rounded-2xl border bg-card overflow-hidden mb-6">
-          <div className="h-32 bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center text-5xl">🐾</div>
+          <div className="h-40 overflow-hidden">
+            <img
+              src={vendor.image_url || "/images/vendor_default.svg"}
+              alt={vendor.business_name}
+              className="h-full w-full object-cover"
+            />
+          </div>
           <div className="p-5 grid gap-3">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -562,7 +579,15 @@ export default function VendorDetailPage() {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {services.map((s) => (
-              <div key={s.id} className="rounded-xl border bg-card p-4 grid gap-2 hover:shadow-sm transition-shadow">
+              <div key={s.id} className="rounded-xl border bg-card overflow-hidden hover:shadow-sm transition-shadow">
+                <div className="h-28 overflow-hidden">
+                  <img
+                    src={s.image_url || SERVICE_IMAGE[s.category] || "/images/services/other.svg"}
+                    alt={s.name}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="p-4 grid gap-2">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-semibold text-sm">{s.name}</p>
@@ -583,6 +608,7 @@ export default function VendorDetailPage() {
                 {s.description && (
                   <p className="text-xs text-muted-foreground italic">{s.description}</p>
                 )}
+                </div>
               </div>
             ))}
           </div>

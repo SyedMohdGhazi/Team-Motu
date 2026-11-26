@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fed7aa"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="200" fill="url(#bg)"/>
+
+  <!-- Paw print trail (background) -->
+  <!-- Paw 1 -->
+  <ellipse cx="52" cy="160" rx="10" ry="8" fill="#f59e0b" opacity="0.25"/>
+  <circle cx="42" cy="150" r="5" fill="#f59e0b" opacity="0.25"/>
+  <circle cx="52" cy="148" r="5" fill="#f59e0b" opacity="0.25"/>
+  <circle cx="62" cy="150" r="5" fill="#f59e0b" opacity="0.25"/>
+  <!-- Paw 2 -->
+  <ellipse cx="96" cy="142" rx="10" ry="8" fill="#f59e0b" opacity="0.22"/>
+  <circle cx="86" cy="132" r="5" fill="#f59e0b" opacity="0.22"/>
+  <circle cx="96" cy="130" r="5" fill="#f59e0b" opacity="0.22"/>
+  <circle cx="106" cy="132" r="5" fill="#f59e0b" opacity="0.22"/>
+  <!-- Paw 3 -->
+  <ellipse cx="308" cy="148" rx="10" ry="8" fill="#f59e0b" opacity="0.22"/>
+  <circle cx="298" cy="138" r="5" fill="#f59e0b" opacity="0.22"/>
+  <circle cx="308" cy="136" r="5" fill="#f59e0b" opacity="0.22"/>
+  <circle cx="318" cy="138" r="5" fill="#f59e0b" opacity="0.22"/>
+  <!-- Paw 4 -->
+  <ellipse cx="352" cy="162" rx="10" ry="8" fill="#f59e0b" opacity="0.25"/>
+  <circle cx="342" cy="152" r="5" fill="#f59e0b" opacity="0.25"/>
+  <circle cx="352" cy="150" r="5" fill="#f59e0b" opacity="0.25"/>
+  <circle cx="362" cy="152" r="5" fill="#f59e0b" opacity="0.25"/>
+
+  <!-- Dog (trotting, right side) -->
+  <!-- Dog body (angled forward) -->
+  <ellipse cx="286" cy="136" rx="44" ry="26" fill="#fcd34d" transform="rotate(-10 286 136)"/>
+  <!-- Legs running -->
+  <rect x="254" y="154" width="14" height="30" rx="7" fill="#fcd34d" transform="rotate(15 261 169)"/>
+  <rect x="274" y="156" width="14" height="28" rx="7" fill="#fcd34d" transform="rotate(-10 281 170)"/>
+  <rect x="296" y="154" width="14" height="30" rx="7" fill="#fcd34d" transform="rotate(20 303 169)"/>
+  <rect x="316" y="156" width="14" height="28" rx="7" fill="#fcd34d" transform="rotate(-15 323 170)"/>
+  <!-- Paws -->
+  <ellipse cx="260" cy="180" rx="10" ry="6" fill="#f59e0b" transform="rotate(15 260 180)"/>
+  <ellipse cx="282" cy="181" rx="10" ry="6" fill="#f59e0b" transform="rotate(-10 282 181)"/>
+  <ellipse cx="308" cy="180" rx="10" ry="6" fill="#f59e0b" transform="rotate(20 308 180)"/>
+  <ellipse cx="328" cy="181" rx="10" ry="6" fill="#f59e0b" transform="rotate(-15 328 181)"/>
+  <!-- Tail up -->
+  <path d="M326 128 Q350 108 345 90 Q342 78 334 82" stroke="#f59e0b" stroke-width="11" fill="none" stroke-linecap="round"/>
+  <!-- Dog head -->
+  <circle cx="258" cy="110" r="30" fill="#fcd34d"/>
+  <!-- Ears -->
+  <ellipse cx="234" cy="118" rx="13" ry="20" fill="#f59e0b" transform="rotate(-10 234 118)"/>
+  <ellipse cx="234" cy="118" rx="8" ry="13" fill="#fde68a" transform="rotate(-10 234 118)"/>
+  <ellipse cx="282" cy="104" rx="12" ry="17" fill="#f59e0b" transform="rotate(15 282 104)"/>
+  <ellipse cx="282" cy="104" rx="7" ry="11" fill="#fde68a" transform="rotate(15 282 104)"/>
+  <!-- Eyes -->
+  <circle cx="247" cy="104" r="5.5" fill="#1c1917"/>
+  <circle cx="269" cy="102" r="5.5" fill="#1c1917"/>
+  <circle cx="248.5" cy="102.5" r="2" fill="white"/>
+  <circle cx="270.5" cy="100.5" r="2" fill="white"/>
+  <!-- Nose -->
+  <ellipse cx="258" cy="116" rx="6" ry="4.5" fill="#1c1917"/>
+  <!-- Tongue out (running) -->
+  <path d="M251 122 Q258 130 265 122" stroke="#1c1917" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="258" cy="129" rx="5.5" ry="6" fill="#f9a8d4"/>
+  <line x1="258" y1="122" x2="258" y2="134" stroke="#f472b6" stroke-width="1.2"/>
+
+  <!-- Leash going left to walker -->
+  <path d="M236 110 Q180 90 150 100" stroke="#f97316" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-dasharray="8,5"/>
+  <!-- Leash handle (at walker side) -->
+  <circle cx="150" cy="100" r="10" fill="none" stroke="#f97316" stroke-width="3.5"/>
+
+  <!-- Walker (simple silhouette, left) -->
+  <!-- Head -->
+  <circle cx="120" cy="66" r="18" fill="#fed7aa" stroke="#f97316" stroke-width="1"/>
+  <!-- Hair -->
+  <path d="M102 60 Q104 44 120 42 Q136 44 138 60" fill="#f97316"/>
+  <!-- Body -->
+  <rect x="106" y="84" width="28" height="50" rx="12" fill="#f97316"/>
+  <!-- Arm holding leash -->
+  <line x1="134" y1="100" x2="150" y2="100" stroke="#fed7aa" stroke-width="10" stroke-linecap="round"/>
+  <!-- Other arm -->
+  <line x1="106" y1="96" x2="88" y2="112" stroke="#fed7aa" stroke-width="10" stroke-linecap="round"/>
+  <!-- Legs -->
+  <line x1="114" y1="134" x2="104" y2="168" stroke="#f97316" stroke-width="10" stroke-linecap="round"/>
+  <line x1="128" y1="134" x2="138" y2="168" stroke="#f97316" stroke-width="10" stroke-linecap="round"/>
+  <!-- Feet -->
+  <ellipse cx="102" cy="170" rx="12" ry="7" fill="#c2410c"/>
+  <ellipse cx="140" cy="170" rx="12" ry="7" fill="#c2410c"/>
+
+  <text x="200" y="196" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="11" fill="#92400e" opacity="0.65" font-weight="700" letter-spacing="1">DAILY WALKIES</text>
+</svg>

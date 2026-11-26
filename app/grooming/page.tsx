@@ -23,6 +23,7 @@ interface Vendor {
   offers_home_service: boolean;
   offers_clinic_visit: boolean;
   maps_url: string | null;
+  image_url: string | null;
   services?: { id: string; price: number; pet_type: string; service_type: string }[];
 }
 
@@ -33,7 +34,13 @@ function VendorCard({ vendor, isOwnVendor }: { vendor: Vendor; isOwnVendor: bool
   return (
     <Link href={href} className="block group">
       <Card className="overflow-hidden hover:shadow-md transition-all duration-200 group-hover:-translate-y-0.5 cursor-pointer">
-        <div className="h-32 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-4xl">🐾</div>
+        <div className="h-32 overflow-hidden">
+          <img
+            src={vendor.image_url || "/images/vendor_default.svg"}
+            alt={vendor.business_name}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        </div>
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-2">
             <div>
