@@ -38,6 +38,20 @@ const PET_EMOJI: Record<string, string> = {
   dog: "🐶", cat: "🐱", rabbit: "🐰", bird: "🐦", other: "🐾",
 };
 
+function isSlotAvailable(slot: string, selectedDate: string): boolean {
+  const today = new Date().toISOString().split("T")[0];
+  if (selectedDate !== today) return true;
+  const now = new Date();
+  const [timePart, meridiem] = slot.split(" ");
+  const [h, m] = timePart.split(":").map(Number);
+  let hour = h;
+  if (meridiem === "PM" && h !== 12) hour += 12;
+  if (meridiem === "AM" && h === 12) hour = 0;
+  const slotTime = new Date();
+  slotTime.setHours(hour, m, 0, 0);
+  return slotTime > now;
+}
+
 const PET_TYPE_LABEL: Record<string, string> = {
   dogs: "🐶 Dogs",
   cats: "🐱 Cats",
@@ -130,21 +144,35 @@ function WalkBookingModal({ walker, savedPets, open, onClose }: {
                 type="date"
                 value={date}
                 min={new Date().toISOString().split("T")[0]}
-                onChange={(e) => setDate(e.target.value)}
+                max={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  if (time && !isSlotAvailable(time, e.target.value)) setTime("");
+                }}
               />
             </div>
             <div className="grid gap-1.5">
               <Label>Preferred time</Label>
               <div className="grid grid-cols-3 gap-2">
-                {TIME_SLOTS.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTime(t)}
-                    className={`rounded-lg border py-2 text-sm font-medium transition-colors ${time === t ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent"}`}
-                  >
-                    {t}
-                  </button>
-                ))}
+                {TIME_SLOTS.map((t) => {
+                  const available = !date || isSlotAvailable(t, date);
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => available && setTime(t)}
+                      disabled={!available}
+                      className={`rounded-lg border py-2 text-sm font-medium transition-colors ${
+                        !available
+                          ? "opacity-40 cursor-not-allowed text-muted-foreground"
+                          : time === t
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "hover:bg-accent"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -66,6 +66,20 @@ function formatCategory(c: string) {
   return c.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
+function isSlotAvailable(slot: string, selectedDate: string): boolean {
+  const today = new Date().toISOString().split("T")[0];
+  if (selectedDate !== today) return true;
+  const now = new Date();
+  const [timePart, meridiem] = slot.split(" ");
+  const [h, m] = timePart.split(":").map(Number);
+  let hour = h;
+  if (meridiem === "PM" && h !== 12) hour += 12;
+  if (meridiem === "AM" && h === 12) hour = 0;
+  const slotTime = new Date();
+  slotTime.setHours(hour, m, 0, 0);
+  return slotTime > now;
+}
+
 type BookingStep = 1 | 2 | 3;
 
 function BookingModal({
@@ -205,7 +219,7 @@ function BookingModal({
               ))}
             </div>
 
-            {selectedService?.service_type === "both" && (
+            {selectedService?.service_type === "both" ? (
               <div className="grid gap-1.5">
                 <Label className="font-semibold">Visit type</Label>
                 <div className="flex rounded-lg border overflow-hidden text-sm">
@@ -223,6 +237,19 @@ function BookingModal({
                   ))}
                 </div>
               </div>
+            ) : (
+              <div className="grid gap-1.5">
+                <Label className="font-semibold">Visit type</Label>
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm">
+                  {selectedService?.service_type === "home"
+                    ? <Home className="h-4 w-4 text-primary" />
+                    : <Building2 className="h-4 w-4 text-primary" />}
+                  <span className="font-medium capitalize">
+                    {selectedService?.service_type === "home" ? "Home visit" : "Clinic visit"}
+                  </span>
+                  <span className="ml-auto text-xs text-muted-foreground">Fixed for this service</span>
+                </div>
+              </div>
             )}
 
             <div className="grid gap-1.5">
@@ -231,24 +258,36 @@ function BookingModal({
                 type="date"
                 value={date}
                 min={new Date().toISOString().split("T")[0]}
-                onChange={(e) => setDate(e.target.value)}
+                max={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  if (time && !isSlotAvailable(time, e.target.value)) setTime("");
+                }}
               />
             </div>
 
             <div className="grid gap-1.5">
               <Label className="font-semibold">Time slot</Label>
               <div className="grid grid-cols-3 gap-2">
-                {TIME_SLOTS.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTime(t)}
-                    className={`rounded-lg border py-2 text-sm font-medium transition-colors ${
-                      time === t ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
+                {TIME_SLOTS.map((t) => {
+                  const available = !date || isSlotAvailable(t, date);
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => available && setTime(t)}
+                      disabled={!available}
+                      className={`rounded-lg border py-2 text-sm font-medium transition-colors ${
+                        !available
+                          ? "opacity-40 cursor-not-allowed text-muted-foreground"
+                          : time === t
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "hover:bg-accent"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
