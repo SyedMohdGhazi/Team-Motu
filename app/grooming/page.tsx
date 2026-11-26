@@ -317,10 +317,12 @@ export default function GroomingPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "home" | "clinic")} className="mb-5">
-          <TabsList className="w-full">
-            <TabsTrigger value="home" className="flex-1 gap-2"><Home className="h-4 w-4" /> Home Service at Doorstep</TabsTrigger>
-            <TabsTrigger value="clinic" className="flex-1 gap-2"><Building2 className="h-4 w-4" /> Book Clinic Visit</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto">
+            <TabsList className="inline-flex h-10 w-max min-w-full">
+              <TabsTrigger value="home" className="flex-1 shrink-0 gap-2"><Home className="h-4 w-4" /> Home Service at Doorstep</TabsTrigger>
+              <TabsTrigger value="clinic" className="flex-1 shrink-0 gap-2"><Building2 className="h-4 w-4" /> Book Clinic Visit</TabsTrigger>
+            </TabsList>
+          </div>
 
           <div className="mt-4 flex items-center gap-2 flex-wrap">
             <div className="flex rounded-lg border overflow-hidden text-sm">
