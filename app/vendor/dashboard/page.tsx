@@ -807,28 +807,30 @@ export default function VendorDashboardPage() {
         )}
 
         <Tabs defaultValue={vendorId ? "bookings" : "profile"}>
-          <TabsList className="w-full mb-5 flex-wrap h-auto gap-1">
-            <TabsTrigger value="bookings" className="flex-1">
-              Bookings {pendingCount > 0 && <span className="ml-1.5 rounded-full bg-primary text-primary-foreground text-xs px-1.5 py-0.5">{pendingCount}</span>}
-            </TabsTrigger>
-            <TabsTrigger value="services" className="flex-1">Services</TabsTrigger>
-            {walkerProfile && (
-              <TabsTrigger value="walk-requests" className="flex-1">
-                Walk Requests {walkPendingCount > 0 && <span className="ml-1.5 rounded-full bg-amber-500 text-white text-xs px-1.5 py-0.5">{walkPendingCount}</span>}
+          <div className="overflow-x-auto mb-5 -mx-4 px-4">
+            <TabsList className="inline-flex h-10 w-max min-w-full gap-1">
+              <TabsTrigger value="bookings" className="shrink-0 px-3">
+                Bookings {pendingCount > 0 && <span className="ml-1.5 rounded-full bg-primary text-primary-foreground text-xs px-1.5 py-0.5">{pendingCount}</span>}
               </TabsTrigger>
-            )}
-            {hasAnyProfile && (
-              <>
-                <TabsTrigger value="photos" className="flex-1 gap-1.5">
-                  <ImageIcon className="h-3.5 w-3.5" /> Photos
+              <TabsTrigger value="services" className="shrink-0 px-3">Services</TabsTrigger>
+              {walkerProfile && (
+                <TabsTrigger value="walk-requests" className="shrink-0 px-3">
+                  Walk Requests {walkPendingCount > 0 && <span className="ml-1.5 rounded-full bg-amber-500 text-white text-xs px-1.5 py-0.5">{walkPendingCount}</span>}
                 </TabsTrigger>
-                <TabsTrigger value="offers" className="flex-1 gap-1.5">
-                  <Tag className="h-3.5 w-3.5" /> Offers
-                </TabsTrigger>
-              </>
-            )}
-            <TabsTrigger value="profile" className="flex-1">Profile</TabsTrigger>
-          </TabsList>
+              )}
+              {hasAnyProfile && (
+                <>
+                  <TabsTrigger value="photos" className="shrink-0 px-3 gap-1.5">
+                    <ImageIcon className="h-3.5 w-3.5" /> Photos
+                  </TabsTrigger>
+                  <TabsTrigger value="offers" className="shrink-0 px-3 gap-1.5">
+                    <Tag className="h-3.5 w-3.5" /> Offers
+                  </TabsTrigger>
+                </>
+              )}
+              <TabsTrigger value="profile" className="shrink-0 px-3">Business Profile</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Bookings */}
           <TabsContent value="bookings" className="grid gap-3">
