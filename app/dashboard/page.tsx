@@ -106,7 +106,7 @@ export default function DashboardPage() {
         {!loading && (
           <div className="mb-8">
             <p className="text-xs text-muted-foreground mb-3 font-semibold uppercase tracking-wider">My Pets</p>
-            <div className="flex items-start gap-4 overflow-x-auto pb-2 no-scrollbar">
+            <div className="flex items-start gap-4 overflow-x-auto py-3 px-1 no-scrollbar">
               {pets.map((pet) => {
                 const isActive = activePetId === pet.id;
                 return (
@@ -117,8 +117,8 @@ export default function DashboardPage() {
                   >
                     <div className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-3xl transition-all duration-200 ${
                       isActive
-                        ? "border-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110"
-                        : "border-border bg-card hover:border-primary/50 hover:scale-105"
+                        ? "border-primary bg-primary/10 shadow-md shadow-primary/20 ring-2 ring-primary/30 ring-offset-2"
+                        : "border-border bg-card hover:border-primary/50"
                     }`}>
                       {PET_EMOJI[pet.type] ?? "🐾"}
                     </div>

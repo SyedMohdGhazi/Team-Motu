@@ -118,7 +118,7 @@ export default function MyPetsPage() {
             {pets.map((pet) => (
               <Card key={pet.id} className="group hover:shadow-md transition-shadow">
                 <CardContent className="flex items-center gap-4 py-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-primary/40 bg-primary/10 text-3xl">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 border-primary/40 bg-primary/10 text-2xl">
                     {PET_EMOJI[pet.type] ?? "🐾"}
                   </div>
                   <div className="flex-1 min-w-0">
