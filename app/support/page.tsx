@@ -42,7 +42,7 @@ export default function SupportPage() {
         {/* Contact options */}
         <div className="grid gap-4 sm:grid-cols-2 mb-10">
           <a
-            href="https://wa.me/919999999999"
+            href="https://wa.me/917798222639"
             target="_blank"
             rel="noopener noreferrer"
             className="group"
@@ -58,14 +58,14 @@ export default function SupportPage() {
             </Card>
           </a>
 
-          <a href="mailto:support@teammotu.in" className="group">
+          <a href="mailto:sm7919@srmist.edu.in" className="group">
             <Card className="hover:shadow-md transition-all h-full border hover:border-primary/40 bg-gradient-to-br from-primary/5 to-primary/0">
               <CardHeader className="pb-2">
                 <Mail className="h-8 w-8 text-primary" />
                 <CardTitle className="text-base mt-2">Email Support</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <p className="text-sm text-muted-foreground">Send us a message at support@teammotu.in and we&apos;ll get back to you.</p>
+                <p className="text-sm text-muted-foreground">Send us a message at sm7919@srmist.edu.in and we&apos;ll get back to you.</p>
               </CardContent>
             </Card>
           </a>
