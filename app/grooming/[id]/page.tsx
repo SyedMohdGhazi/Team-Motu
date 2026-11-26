@@ -421,12 +421,12 @@ export default function VendorDetailPage() {
       ] = await Promise.all([
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase.from("grooming_vendors") as any)
-          .select("id, user_id, business_name, description, address, city, rating, total_reviews, offers_home_service, offers_clinic_visit, maps_url, image_url")
+          .select("*")
           .eq("id", id)
           .single(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase.from("services") as any)
-          .select("id, name, price, duration_minutes, category, pet_type, service_type, description, image_url")
+          .select("id, name, price, duration_minutes, category, pet_type, service_type, description")
           .eq("vendor_id", id)
           .eq("is_active", true)
           .order("price", { ascending: true }),

@@ -331,7 +331,7 @@ export default function PetWalkingPage() {
         supabase.auth.getUser(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase.from("pet_walkers") as any)
-          .select("id, user_id, full_name, phone, service_area, pet_types, bio")
+          .select("*")
           .eq("is_active", true)
           .order("created_at", { ascending: false }),
       ]);

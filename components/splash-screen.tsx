@@ -6,6 +6,11 @@ export function SplashScreen() {
   const [phase, setPhase] = useState<"visible" | "fading" | "gone">("visible");
 
   useEffect(() => {
+    if (sessionStorage.getItem("tm-splash")) {
+      setPhase("gone");
+      return;
+    }
+    sessionStorage.setItem("tm-splash", "1");
     const fadeTimer = setTimeout(() => setPhase("fading"), 1500);
     const hideTimer = setTimeout(() => setPhase("gone"),   1850);
     return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
