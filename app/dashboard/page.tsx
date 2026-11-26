@@ -59,8 +59,8 @@ export default function DashboardPage() {
         ? `For ${activePet.name}`
         : "At-home or salon visits",
       href: "/grooming",
-      color: "text-[#62C995]",
-      gradient: "from-[#62C995]/20 to-[#B8E8C9]/30",
+      color: "text-primary",
+      gradient: "from-primary/15 to-primary/5",
     },
     {
       icon: PawPrint,
@@ -69,16 +69,16 @@ export default function DashboardPage() {
         ? `Walks for ${activePet.name}`
         : "Daily walks near you",
       href: "/pet-walking",
-      color: "text-[#FFAA62]",
-      gradient: "from-[#FFAA62]/20 to-[#FFD966]/30",
+      color: "text-amber-500",
+      gradient: "from-amber-500/15 to-amber-400/5",
     },
     {
       icon: CalendarDays,
       title: "My Bookings",
       description: "View appointments",
       href: "/dashboard/bookings",
-      color: "text-[#62C995]",
-      gradient: "from-[#62C995]/15 to-[#B8E8C9]/20",
+      color: "text-primary",
+      gradient: "from-primary/10 to-primary/5",
     },
   ];
 
@@ -93,7 +93,7 @@ export default function DashboardPage() {
             {firstName ? `Hello, ${firstName} 👋` : "Hello there 👋"}
           </h1>
           {activePet ? (
-            <p className="text-sm font-medium mt-1" style={{ color: "#62C995" }}>
+            <p className="text-sm font-medium text-primary mt-1">
               Caring for {activePet.name} today
               {activePet.breed ? ` · ${activePet.breed}` : ""} {PET_EMOJI[activePet.type] ?? "🐾"}
             </p>
@@ -117,13 +117,13 @@ export default function DashboardPage() {
                   >
                     <div className={`flex h-16 w-16 items-center justify-center rounded-full border-2 text-3xl transition-all duration-200 ${
                       isActive
-                        ? "border-[#62C995] bg-[#62C995]/15 shadow-lg shadow-[#62C995]/25 scale-110"
-                        : "border-border bg-card hover:border-[#62C995]/50 hover:scale-105"
+                        ? "border-primary bg-primary/10 shadow-lg shadow-primary/20 scale-110"
+                        : "border-border bg-card hover:border-primary/50 hover:scale-105"
                     }`}>
                       {PET_EMOJI[pet.type] ?? "🐾"}
                     </div>
                     <span className={`text-xs font-semibold max-w-[72px] truncate transition-colors ${
-                      isActive ? "text-[#35443B] dark:text-[#d4f0e3]" : "text-muted-foreground"
+                      isActive ? "text-primary" : "text-muted-foreground"
                     }`}>
                       {pet.name}
                     </span>
@@ -133,10 +133,10 @@ export default function DashboardPage() {
 
               {/* Add pet circle */}
               <Link href="/pet/new" className="flex flex-col items-center gap-2 shrink-0 group">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-border bg-card hover:border-[#62C995]/60 hover:bg-[#62C995]/8 text-2xl text-muted-foreground group-hover:text-[#62C995] transition-all duration-200">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-border bg-card hover:border-primary/50 hover:bg-primary/5 text-2xl text-muted-foreground group-hover:text-primary transition-all duration-200">
                   <Plus className="h-6 w-6" />
                 </div>
-                <span className="text-xs text-muted-foreground group-hover:text-[#62C995] transition-colors">Add pet</span>
+                <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">Add pet</span>
               </Link>
             </div>
           </div>
@@ -161,9 +161,9 @@ export default function DashboardPage() {
 
           {/* My Pets management tile */}
           <Link href="/pet/my" className="group">
-            <Card className="hover:shadow-md transition-all h-full border border-dashed bg-gradient-to-br from-[#FFD966]/15 to-[#FFAA62]/15 hover:border-[#FFAA62]/50">
+            <Card className="hover:shadow-md transition-all h-full border border-dashed bg-gradient-to-br from-amber-500/10 to-amber-400/5 hover:border-amber-500/40">
               <CardHeader className="pb-2">
-                <BookOpen className="h-8 w-8 text-[#FFAA62]" />
+                <BookOpen className="h-8 w-8 text-amber-500" />
                 <CardTitle className="text-base mt-2">
                   {pets.length > 0 ? `My Pets (${pets.length})` : "Add your pet"}
                 </CardTitle>

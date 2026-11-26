@@ -4,30 +4,14 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  Star, MapPin, Clock, CheckCircle2, Home, Building2,
-  SlidersHorizontal, ChevronRight, ChevronLeft, Loader2, ExternalLink, ArrowLeft,
+  Star, MapPin, Clock, Home, Building2,
+  SlidersHorizontal, Loader2, ExternalLink, ArrowLeft,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
-
-const TIME_SLOTS = [
-  "09:00 AM","10:00 AM","11:00 AM","12:00 PM",
-  "02:00 PM","03:00 PM","04:00 PM","05:00 PM","06:00 PM",
-];
-
-type BookingStep = 1 | 2 | 3;
 
 interface Vendor {
   id: string;
@@ -43,223 +27,59 @@ interface Vendor {
   services?: { id: string; price: number; pet_type: string; service_type: string }[];
 }
 
-function BookingModal({ vendor, serviceType, open, onClose }: {
-  vendor: Vendor; serviceType: "home" | "clinic"; open: boolean; onClose: () => void;
-}) {
-  const [step, setStep] = useState<BookingStep>(1);
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [petName, setPetName] = useState("");
-  const [petType, setPetType] = useState("");
-  const [petBreed, setPetBreed] = useState("");
-  const [petAge, setPetAge] = useState("");
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-  const supabase = createClient();
-
-  const priceFrom = vendor.services?.length
-    ? Math.min(...vendor.services.map((s) => s.price))
-    : null;
-
-  async function handleConfirm() {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast({ title: "Please sign in to book", variant: "destructive" });
-      setLoading(false);
-      return;
-    }
-    const service = vendor.services?.[0];
-    if (!service) {
-      toast({ title: "No services available", variant: "destructive" });
-      setLoading(false);
-      return;
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from("bookings") as any).insert({
-      user_id: user.id,
-      vendor_id: vendor.id,
-      service_id: service.id ?? "",
-      pet_name: petName,
-      pet_type: petType as "dog" | "cat" | "other",
-      pet_breed: petBreed || null,
-      pet_age_years: petAge ? parseFloat(petAge) : null,
-      appointment_date: date,
-      appointment_time: time,
-      booking_type: serviceType,
-      total_price: priceFrom ?? 0,
-      status: "pending",
-    });
-    setLoading(false);
-    if (error) {
-      toast({ title: "Booking failed", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Booking confirmed!", description: `${vendor.business_name} on ${date} at ${time}` });
-      onClose();
-      setStep(1); setDate(""); setTime(""); setPetName(""); setPetType(""); setPetBreed(""); setPetAge("");
-    }
-  }
-
-  const STEP_TITLES = ["Select Date & Time", "Pet Details", "Review & Confirm"];
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Book {serviceType === "home" ? "Home Service" : "Clinic Visit"} — {vendor.business_name}</DialogTitle>
-        </DialogHeader>
-        <div className="flex items-center gap-1 pb-2">
-          {([1, 2, 3] as const).map((s) => (
-            <div key={s} className="flex items-center gap-1 flex-1">
-              <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${step >= s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                {step > s ? <CheckCircle2 className="h-4 w-4" /> : s}
-              </div>
-              {s < 3 && <div className={`h-0.5 flex-1 rounded transition-colors ${step > s ? "bg-primary" : "bg-muted"}`} />}
-            </div>
-          ))}
-        </div>
-        <p className="text-sm font-medium text-muted-foreground -mt-1">Step {step}: {STEP_TITLES[step - 1]}</p>
-
-        {step === 1 && (
-          <div className="grid gap-4 py-2">
-            <div className="grid gap-1.5">
-              <Label>Appointment date</Label>
-              <Input type="date" value={date} min={new Date().toISOString().split("T")[0]} onChange={(e) => setDate(e.target.value)} />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Time slot</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {TIME_SLOTS.map((t) => (
-                  <button key={t} onClick={() => setTime(t)} className={`rounded-lg border py-2 text-sm font-medium transition-colors ${time === t ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent"}`}>{t}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="grid gap-4 py-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1.5">
-                <Label>Pet name</Label>
-                <Input placeholder="Buddy" value={petName} onChange={(e) => setPetName(e.target.value)} />
-              </div>
-              <div className="grid gap-1.5">
-                <Label>Pet type</Label>
-                <Select value={petType} onValueChange={setPetType}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dog">Dog</SelectItem>
-                    <SelectItem value="cat">Cat</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1.5">
-                <Label>Breed (optional)</Label>
-                <Input placeholder="Golden Retriever" value={petBreed} onChange={(e) => setPetBreed(e.target.value)} />
-              </div>
-              <div className="grid gap-1.5">
-                <Label>Age (years)</Label>
-                <Input type="number" min="0" max="30" step="0.5" placeholder="2" value={petAge} onChange={(e) => setPetAge(e.target.value)} />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="rounded-xl border bg-muted/40 p-4 grid gap-3 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Vendor</span><span className="font-medium">{vendor.business_name}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Service type</span><span className="font-medium capitalize">{serviceType}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Date & time</span><span className="font-medium">{date} · {time}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Pet</span><span className="font-medium">{petName} ({petType}{petBreed ? `, ${petBreed}` : ""})</span></div>
-            {priceFrom && (
-              <div className="flex justify-between border-t pt-3"><span className="text-muted-foreground">Estimated price</span><span className="font-bold text-primary">₹{priceFrom}+</span></div>
-            )}
-          </div>
-        )}
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          {step > 1 && (
-            <Button variant="outline" onClick={() => setStep((s) => (s - 1) as BookingStep)}>
-              <ChevronLeft className="h-4 w-4 mr-1" /> Back
-            </Button>
-          )}
-          {step < 3 ? (
-            <Button onClick={() => setStep((s) => (s + 1) as BookingStep)} disabled={(step === 1 && (!date || !time)) || (step === 2 && (!petName || !petType))}>
-              Next <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          ) : (
-            <Button onClick={handleConfirm} disabled={loading} className="bg-primary hover:bg-primary/90">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-              Confirm booking
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function VendorCard({ vendor, activeTab, isOwnVendor, isVendor }: { vendor: Vendor; activeTab: "home" | "clinic"; isOwnVendor: boolean; isVendor: boolean }) {
-  const [bookingOpen, setBookingOpen] = useState(false);
+function VendorCard({ vendor, isOwnVendor }: { vendor: Vendor; isOwnVendor: boolean }) {
   const priceFrom = vendor.services?.length ? Math.min(...vendor.services.map((s) => s.price)) : null;
 
   return (
-    <>
-      <Card className="overflow-hidden hover:shadow-md transition-shadow">
-        <div className="h-32 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-4xl">🐾</div>
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <h3 className="font-bold text-base">{vendor.business_name}</h3>
-              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                <MapPin className="h-3 w-3" />{vendor.address ?? vendor.city ?? "Dehradun"}
-              </p>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-              <span className="text-sm font-semibold">{vendor.rating.toFixed(1)}</span>
-              <span className="text-xs text-muted-foreground">({vendor.total_reviews})</span>
-            </div>
+    <Card className="overflow-hidden hover:shadow-md transition-shadow">
+      <div className="h-32 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-4xl">🐾</div>
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h3 className="font-bold text-base">{vendor.business_name}</h3>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+              <MapPin className="h-3 w-3" />{vendor.address ?? vendor.city ?? "Dehradun"}
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="pt-0 grid gap-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {vendor.offers_home_service && <span className="flex items-center gap-1"><Home className="h-3.5 w-3.5 text-primary" /> Home</span>}
-            {vendor.offers_clinic_visit && <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 text-primary" /> Clinic</span>}
-            <span className="flex items-center gap-1 ml-auto"><Clock className="h-3.5 w-3.5" /> 30–90 min</span>
+          <div className="flex items-center gap-1 shrink-0">
+            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+            <span className="text-sm font-semibold">{vendor.rating.toFixed(1)}</span>
+            <span className="text-xs text-muted-foreground">({vendor.total_reviews})</span>
           </div>
-          {vendor.offers_clinic_visit && vendor.maps_url && (
-            <a
-              href={vendor.maps_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs text-primary hover:underline w-fit"
-            >
-              <MapPin className="h-3.5 w-3.5" /> View on Maps <ExternalLink className="h-3 w-3" />
-            </a>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0 grid gap-3">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {vendor.offers_home_service && <span className="flex items-center gap-1"><Home className="h-3.5 w-3.5 text-primary" /> Home</span>}
+          {vendor.offers_clinic_visit && <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 text-primary" /> Clinic</span>}
+          <span className="flex items-center gap-1 ml-auto"><Clock className="h-3.5 w-3.5" /> 30–90 min</span>
+        </div>
+        {vendor.offers_clinic_visit && vendor.maps_url && (
+          <a
+            href={vendor.maps_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs text-primary hover:underline w-fit"
+          >
+            <MapPin className="h-3.5 w-3.5" /> View on Maps <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
+        <div className="flex items-center justify-between pt-1 border-t">
+          <span className="text-sm">
+            {priceFrom
+              ? <>From <strong className="text-primary">₹{priceFrom}</strong></>
+              : <span className="text-muted-foreground text-xs">No services listed yet</span>}
+          </span>
+          {isOwnVendor ? (
+            <Button size="sm" variant="outline" disabled>Your business</Button>
+          ) : (
+            <Link href={`/grooming/${vendor.id}`}>
+              <Button size="sm">View details</Button>
+            </Link>
           )}
-          <div className="flex items-center justify-between pt-1 border-t">
-            <span className="text-sm">
-              {priceFrom ? <>From <strong className="text-primary">₹{priceFrom}</strong></> : <span className="text-muted-foreground text-xs">No services listed yet</span>}
-            </span>
-            {isOwnVendor ? (
-              <Button size="sm" variant="outline" disabled>Your business</Button>
-            ) : isVendor ? (
-              <Button size="sm" variant="outline" disabled>Not available for vendors</Button>
-            ) : (
-              <Button size="sm" onClick={() => setBookingOpen(true)} disabled={!vendor.services?.length}>Book now</Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      {bookingOpen && !isOwnVendor && !isVendor && (
-        <BookingModal vendor={vendor} serviceType={activeTab} open={bookingOpen} onClose={() => setBookingOpen(false)} />
-      )}
-    </>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -271,7 +91,6 @@ export default function GroomingPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -286,11 +105,6 @@ export default function GroomingPage() {
           .order("rating", { ascending: false }),
       ]);
       setCurrentUserId(user?.id ?? null);
-      if (user) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: profile } = await (supabase.from("users") as any).select("role").eq("id", user.id).single();
-        setUserRole(profile?.role ?? null);
-      }
       setVendors((data as Vendor[]) ?? []);
       setLoading(false);
     }
@@ -357,7 +171,7 @@ export default function GroomingPage() {
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {filtered.map((v) => <VendorCard key={v.id} vendor={v} activeTab={tab} isOwnVendor={currentUserId === v.user_id} isVendor={userRole === "vendor"} />)}
+                  {filtered.map((v) => <VendorCard key={v.id} vendor={v} isOwnVendor={currentUserId === v.user_id} />)}
                 </div>
               )}
             </TabsContent>

@@ -26,6 +26,18 @@ interface Walker {
   bio: string | null;
 }
 
+interface UserPet {
+  id: string;
+  name: string;
+  type: string;
+  breed: string | null;
+  age_years: number | null;
+}
+
+const PET_EMOJI: Record<string, string> = {
+  dog: "🐶", cat: "🐱", rabbit: "🐰", bird: "🐦", other: "🐾",
+};
+
 const PET_TYPE_LABEL: Record<string, string> = {
   dogs: "🐶 Dogs",
   cats: "🐱 Cats",
@@ -39,8 +51,8 @@ const TIME_SLOTS = [
 
 type BookingStep = 1 | 2 | 3;
 
-function WalkBookingModal({ walker, open, onClose }: {
-  walker: Walker; open: boolean; onClose: () => void;
+function WalkBookingModal({ walker, savedPets, open, onClose }: {
+  walker: Walker; savedPets: UserPet[]; open: boolean; onClose: () => void;
 }) {
   const [step, setStep] = useState<BookingStep>(1);
   const [date, setDate] = useState("");
@@ -140,6 +152,25 @@ function WalkBookingModal({ walker, open, onClose }: {
 
         {step === 2 && (
           <div className="grid gap-4 py-2">
+            {savedPets.length > 0 && (
+              <div className="grid gap-1.5">
+                <Label>Use a saved pet</Label>
+                <Select onValueChange={(id) => {
+                  const pet = savedPets.find((p) => p.id === id);
+                  if (pet) { setPetName(pet.name); setPetType(pet.type); }
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Choose a saved pet…" /></SelectTrigger>
+                  <SelectContent>
+                    {savedPets.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {PET_EMOJI[p.type] ?? "🐾"} {p.name}{p.breed ? ` · ${p.breed}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">— or fill in below —</p>
+              </div>
+            )}
             <div className="grid gap-1.5">
               <Label>Pet name</Label>
               <Input placeholder="e.g. Bruno" value={petName} onChange={(e) => setPetName(e.target.value)} />
@@ -202,7 +233,7 @@ function WalkBookingModal({ walker, open, onClose }: {
   );
 }
 
-function WalkerCard({ walker, isOwnWalker, isVendor }: { walker: Walker; isOwnWalker: boolean; isVendor: boolean }) {
+function WalkerCard({ walker, isOwnWalker, isVendor, savedPets }: { walker: Walker; isOwnWalker: boolean; isVendor: boolean; savedPets: UserPet[] }) {
   const [bookingOpen, setBookingOpen] = useState(false);
   const initials = walker.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   const petLabel = walker.pet_types ? (PET_TYPE_LABEL[walker.pet_types] ?? walker.pet_types) : null;
@@ -247,7 +278,7 @@ function WalkerCard({ walker, isOwnWalker, isVendor }: { walker: Walker; isOwnWa
       </div>
 
       {bookingOpen && !isOwnWalker && !isVendor && (
-        <WalkBookingModal walker={walker} open={bookingOpen} onClose={() => setBookingOpen(false)} />
+        <WalkBookingModal walker={walker} savedPets={savedPets} open={bookingOpen} onClose={() => setBookingOpen(false)} />
       )}
     </>
   );
@@ -259,6 +290,7 @@ export default function PetWalkingPage() {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [savedPets, setSavedPets] = useState<UserPet[]>([]);
   const supabase = createClient();
 
   useEffect(() => {
@@ -277,6 +309,9 @@ export default function PetWalkingPage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: profile } = await (supabase.from("users") as any).select("role").eq("id", user.id).single();
         setUserRole(profile?.role ?? null);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: pets } = await (supabase.from("user_pets") as any).select("id, name, type, breed, age_years").eq("user_id", user.id).order("created_at", { ascending: true });
+        setSavedPets((pets as UserPet[]) ?? []);
       }
       setWalkers((data as Walker[]) ?? []);
       setLoading(false);
@@ -327,7 +362,7 @@ export default function PetWalkingPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {filtered.map((w) => <WalkerCard key={w.id} walker={w} isOwnWalker={currentUserId === w.user_id} isVendor={userRole === "vendor"} />)}
+            {filtered.map((w) => <WalkerCard key={w.id} walker={w} isOwnWalker={currentUserId === w.user_id} isVendor={userRole === "vendor"} savedPets={savedPets} />)}
           </div>
         )}
       </main>
