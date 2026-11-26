@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import {
   Star, MapPin, Clock, CheckCircle2, Home, Building2,
-  SlidersHorizontal, ChevronRight, ChevronLeft, Loader2,
+  SlidersHorizontal, ChevronRight, ChevronLeft, Loader2, ExternalLink,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -38,6 +38,7 @@ interface Vendor {
   total_reviews: number;
   offers_home_service: boolean;
   offers_clinic_visit: boolean;
+  maps_url: string | null;
   services?: { id: string; price: number; pet_type: string; service_type: string }[];
 }
 
@@ -230,6 +231,16 @@ function VendorCard({ vendor, activeTab, isOwnVendor }: { vendor: Vendor; active
             {vendor.offers_clinic_visit && <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 text-primary" /> Clinic</span>}
             <span className="flex items-center gap-1 ml-auto"><Clock className="h-3.5 w-3.5" /> 30–90 min</span>
           </div>
+          {vendor.offers_clinic_visit && vendor.maps_url && (
+            <a
+              href={vendor.maps_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-primary hover:underline w-fit"
+            >
+              <MapPin className="h-3.5 w-3.5" /> View on Maps <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
           <div className="flex items-center justify-between pt-1 border-t">
             <span className="text-sm">
               {priceFrom ? <>From <strong className="text-primary">₹{priceFrom}</strong></> : <span className="text-muted-foreground text-xs">No services listed yet</span>}

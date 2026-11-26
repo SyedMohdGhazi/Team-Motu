@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   CheckCircle2, XCircle, Clock, TrendingUp, Star, Home, Building2,
-  Plus, Pencil, MapPin, IndianRupee, Percent, Loader2, Save,
+  Plus, Pencil, MapPin, IndianRupee, Percent, Loader2, Save, Trash2, Link,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -125,10 +125,19 @@ interface VendorProfile {
   city: string;
   phone: string;
   email: string;
-  latitude: string;
-  longitude: string;
+  maps_url: string;
   offers_home_service: boolean;
   offers_clinic_visit: boolean;
+}
+
+function parseMapsUrl(url: string): { lat: number | null; lng: number | null } {
+  const atMatch = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (atMatch) return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+  const qMatch = url.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (qMatch) return { lat: parseFloat(qMatch[1]), lng: parseFloat(qMatch[2]) };
+  const llMatch = url.match(/ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (llMatch) return { lat: parseFloat(llMatch[1]), lng: parseFloat(llMatch[2]) };
+  return { lat: null, lng: null };
 }
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
@@ -238,14 +247,134 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
   );
 }
 
+interface ServiceRow { id: string; name: string; price: number; duration_minutes: number; pet_type: string; service_type: string; category: string; }
+
+function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
+  service: ServiceRow | null; open: boolean; onClose: () => void;
+  onEdited: (s: ServiceRow) => void; onDeleted: (id: string) => void;
+}) {
+  const [name, setName] = useState(service?.name ?? "");
+  const [price, setPrice] = useState(service?.price?.toString() ?? "");
+  const [duration, setDuration] = useState(service?.duration_minutes?.toString() ?? "");
+  const [petType, setPetType] = useState(service?.pet_type ?? "both");
+  const [serviceType, setServiceType] = useState(service?.service_type ?? "both");
+  const [category, setCategory] = useState(service?.category ?? "bath");
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (service) {
+      setName(service.name); setPrice(service.price.toString());
+      setDuration(service.duration_minutes.toString()); setPetType(service.pet_type);
+      setServiceType(service.service_type); setCategory(service.category);
+    }
+  }, [service]);
+
+  async function handleSave() {
+    if (!service || !name || !price || !duration) return;
+    setLoading(true);
+    const updated = { name, price: parseFloat(price), duration_minutes: parseInt(duration), category, pet_type: petType as "dog"|"cat"|"both", service_type: serviceType as "home"|"clinic"|"both" };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("services") as any).update(updated).eq("id", service.id);
+    setLoading(false);
+    if (error) {
+      toast({ title: "Failed to update", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Service updated!" });
+      onEdited({ ...service, ...updated });
+      onClose();
+    }
+  }
+
+  async function handleDelete() {
+    if (!service || !confirm(`Delete "${service.name}"? This cannot be undone.`)) return;
+    setLoading(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from("services") as any).update({ is_active: false }).eq("id", service.id);
+    setLoading(false);
+    toast({ title: "Service removed" });
+    onDeleted(service.id);
+    onClose();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle>Edit Service</DialogTitle></DialogHeader>
+        <div className="grid gap-4 py-2">
+          <div className="grid gap-1.5">
+            <Label>Service name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Category</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {["bath","haircut","nail_trim","ear_cleaning","full_package","other"].map((c) => (
+                  <SelectItem key={c} value={c} className="capitalize">{c.replace("_"," ")}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label>Price (₹)</Label>
+              <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Duration (mins)</Label>
+              <Input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label>Pet type</Label>
+              <Select value={petType} onValueChange={setPetType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dog">Dogs</SelectItem>
+                  <SelectItem value="cat">Cats</SelectItem>
+                  <SelectItem value="both">Both</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Service type</Label>
+              <Select value={serviceType} onValueChange={setServiceType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="home">Home only</SelectItem>
+                  <SelectItem value="clinic">Clinic only</SelectItem>
+                  <SelectItem value="both">Both</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="destructive" size="sm" onClick={handleDelete} disabled={loading} className="sm:mr-auto">
+            <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete service
+          </Button>
+          <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+          <Button onClick={handleSave} disabled={loading || !name || !price || !duration}>
+            {loading && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Save changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function VendorDashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [walkBookings, setWalkBookings] = useState<WalkBooking[]>([]);
   const [walkerProfile, setWalkerProfile] = useState<WalkerProfile | null>(null);
-  const [services, setServices] = useState<{ id: string; name: string; price: number; duration_minutes: number; pet_type: string; service_type: string }[]>([]);
+  const [services, setServices] = useState<ServiceRow[]>([]);
   const [profile, setProfile] = useState<VendorProfile>({
     business_name: "", description: "", address: "", city: "Dehradun",
-    phone: "", email: "", latitude: "", longitude: "",
+    phone: "", email: "", maps_url: "",
     offers_home_service: true, offers_clinic_visit: true,
   });
   const [vendorId, setVendorId] = useState<string | null>(null);
@@ -253,6 +382,7 @@ export default function VendorDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [addServiceOpen, setAddServiceOpen] = useState(false);
+  const [editingService, setEditingService] = useState<ServiceRow | null>(null);
   const [rejectBookingId, setRejectBookingId] = useState<string | null>(null);
   const { toast } = useToast();
   const supabase = createClient();
@@ -293,8 +423,7 @@ export default function VendorDashboardPage() {
           city: vendor.city ?? "Dehradun",
           phone: vendor.phone ?? "",
           email: vendor.email ?? "",
-          latitude: vendor.latitude?.toString() ?? "",
-          longitude: vendor.longitude?.toString() ?? "",
+          maps_url: vendor.maps_url ?? "",
           offers_home_service: vendor.offers_home_service,
           offers_clinic_visit: vendor.offers_clinic_visit,
         });
@@ -341,6 +470,7 @@ export default function VendorDashboardPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSavingProfile(false); return; }
 
+    const { lat, lng } = profile.maps_url ? parseMapsUrl(profile.maps_url) : { lat: null, lng: null };
     const basePayload = {
       user_id: user.id,
       business_name: profile.business_name,
@@ -349,8 +479,9 @@ export default function VendorDashboardPage() {
       city: profile.city || null,
       phone: profile.phone || null,
       email: profile.email || null,
-      latitude: profile.latitude ? parseFloat(profile.latitude) : null,
-      longitude: profile.longitude ? parseFloat(profile.longitude) : null,
+      maps_url: profile.maps_url || null,
+      latitude: lat,
+      longitude: lng,
       offers_home_service: profile.offers_home_service,
       offers_clinic_visit: profile.offers_clinic_visit,
     };
@@ -593,7 +724,9 @@ export default function VendorDashboardPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-primary">₹{s.price}</span>
-                      <Button size="icon" variant="ghost" className="h-8 w-8"><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingService(s)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -686,15 +819,19 @@ export default function VendorDashboardPage() {
                     <Label>Address</Label>
                     <Input placeholder="Near ISBT, Dehradun" value={profile.address} onChange={(e) => setProfile((p) => ({ ...p, address: e.target.value }))} />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-1.5">
-                      <Label>Latitude <span className="text-muted-foreground text-xs">(optional)</span></Label>
-                      <Input type="number" placeholder="30.3165" value={profile.latitude} onChange={(e) => setProfile((p) => ({ ...p, latitude: e.target.value }))} />
-                    </div>
-                    <div className="grid gap-1.5">
-                      <Label>Longitude <span className="text-muted-foreground text-xs">(optional)</span></Label>
-                      <Input type="number" placeholder="78.0322" value={profile.longitude} onChange={(e) => setProfile((p) => ({ ...p, longitude: e.target.value }))} />
-                    </div>
+                  <div className="grid gap-1.5">
+                    <Label className="flex items-center gap-1.5">
+                      <Link className="h-3.5 w-3.5" />
+                      Google Maps link <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                    </Label>
+                    <Input
+                      placeholder="Paste your Google Maps link here…"
+                      value={profile.maps_url}
+                      onChange={(e) => setProfile((p) => ({ ...p, maps_url: e.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Open Google Maps → find your business → Share → Copy link. Coordinates are extracted automatically.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -733,6 +870,14 @@ export default function VendorDashboardPage() {
         </Tabs>
       </main>
       {vendorId && <AddServiceDialog vendorId={vendorId} open={addServiceOpen} onClose={() => setAddServiceOpen(false)} onAdded={() => { /* refetch services */ }} />}
+
+      <EditServiceDialog
+        service={editingService}
+        open={!!editingService}
+        onClose={() => setEditingService(null)}
+        onEdited={(updated) => setServices((prev) => prev.map((s) => s.id === updated.id ? updated : s))}
+        onDeleted={(id) => setServices((prev) => prev.filter((s) => s.id !== id))}
+      />
 
       <RejectDialog
         open={!!rejectBookingId}
