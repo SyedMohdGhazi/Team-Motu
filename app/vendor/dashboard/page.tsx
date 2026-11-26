@@ -23,6 +23,68 @@ const PLATFORM_COMMISSION_PCT = 15;
 type BookingStatus = "pending" | "confirmed" | "in_progress" | "completed" | "cancelled";
 type WalkStatus = "pending" | "confirmed" | "completed" | "cancelled";
 
+const REJECTION_REASONS = [
+  "Not available at this time",
+  "Closed on that day",
+  "Pet type not served",
+  "Service no longer available",
+  "Location too far",
+  "Other",
+] as const;
+
+function RejectDialog({ open, onClose, onConfirm }: {
+  open: boolean; onClose: () => void; onConfirm: (reason: string) => void;
+}) {
+  const [selected, setSelected] = useState("");
+  const [otherText, setOtherText] = useState("");
+  const isOther = selected === "Other";
+  const wordCount = otherText.trim() ? otherText.trim().split(/\s+/).length : 0;
+  const isValid = selected && (!isOther || (otherText.trim().length > 0 && wordCount <= 100));
+
+  function handleConfirm() {
+    onConfirm(isOther ? otherText.trim() : selected);
+    setSelected(""); setOtherText("");
+  }
+  function handleClose() {
+    onClose(); setSelected(""); setOtherText("");
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle>Reason for Rejection</DialogTitle></DialogHeader>
+        <div className="grid gap-2 py-2">
+          {REJECTION_REASONS.map((reason) => (
+            <label key={reason} className={`flex items-center gap-3 cursor-pointer rounded-lg border px-3 py-2.5 text-sm transition-colors hover:bg-accent ${selected === reason ? "border-primary bg-primary/5" : ""}`}>
+              <input type="radio" name="rejection_reason" value={reason} checked={selected === reason} onChange={() => setSelected(reason)} className="accent-primary" />
+              {reason}
+            </label>
+          ))}
+          {isOther && (
+            <div className="grid gap-1 mt-1">
+              <textarea
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="Describe the reason (max 100 words)…"
+                value={otherText}
+                onChange={(e) => setOtherText(e.target.value)}
+              />
+              <p className={`text-xs text-right ${wordCount > 100 ? "text-red-500 font-semibold" : "text-muted-foreground"}`}>
+                {wordCount}/100 words
+              </p>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button variant="destructive" disabled={!isValid} onClick={handleConfirm}>
+            Reject Booking
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 interface Booking {
   id: string;
   pet_name: string;
@@ -33,6 +95,7 @@ interface Booking {
   status: BookingStatus;
   total_price: number;
   notes: string | null;
+  rejection_reason: string | null;
   users?: { full_name: string | null; email: string };
   services?: { name: string };
 }
@@ -190,6 +253,7 @@ export default function VendorDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [addServiceOpen, setAddServiceOpen] = useState(false);
+  const [rejectBookingId, setRejectBookingId] = useState<string | null>(null);
   const { toast } = useToast();
   const supabase = createClient();
   const router = useRouter();
@@ -312,13 +376,15 @@ export default function VendorDashboardPage() {
     }
   }
 
-  async function updateBookingStatus(id: string, status: BookingStatus) {
+  async function updateBookingStatus(id: string, status: BookingStatus, reason?: string) {
+    const payload: Record<string, unknown> = { status };
+    if (reason !== undefined) payload.rejection_reason = reason;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from("bookings") as any).update({ status }).eq("id", id);
+    const { error } = await (supabase.from("bookings") as any).update(payload).eq("id", id);
     if (error) {
       toast({ title: "Update failed", description: error.message, variant: "destructive" });
     } else {
-      setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status } : b));
+      setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status, rejection_reason: reason ?? null } : b));
       toast({ title: `Booking ${status}` });
     }
   }
@@ -480,10 +546,15 @@ export default function VendorDashboardPage() {
                         <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50" onClick={() => updateBookingStatus(b.id, "confirmed")}>
                           <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Accept
                         </Button>
-                        <Button size="sm" variant="outline" className="border-red-300 text-red-600 hover:bg-red-50" onClick={() => updateBookingStatus(b.id, "cancelled")}>
+                        <Button size="sm" variant="outline" className="border-red-300 text-red-600 hover:bg-red-50" onClick={() => setRejectBookingId(b.id)}>
                           <XCircle className="h-3.5 w-3.5 mr-1" /> Reject
                         </Button>
                       </div>
+                    )}
+                    {b.status === "cancelled" && b.rejection_reason && (
+                      <p className="text-xs rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-2">
+                        <span className="font-semibold">Rejection reason: </span>{b.rejection_reason}
+                      </p>
                     )}
                     {b.status === "confirmed" && (
                       <Button size="sm" variant="outline" className="w-fit border-blue-300 text-blue-700 hover:bg-blue-50" onClick={() => updateBookingStatus(b.id, "completed")}>
@@ -662,6 +733,15 @@ export default function VendorDashboardPage() {
         </Tabs>
       </main>
       {vendorId && <AddServiceDialog vendorId={vendorId} open={addServiceOpen} onClose={() => setAddServiceOpen(false)} onAdded={() => { /* refetch services */ }} />}
+
+      <RejectDialog
+        open={!!rejectBookingId}
+        onClose={() => setRejectBookingId(null)}
+        onConfirm={(reason) => {
+          if (rejectBookingId) updateBookingStatus(rejectBookingId, "cancelled", reason);
+          setRejectBookingId(null);
+        }}
+      />
     </>
   );
 }

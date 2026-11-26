@@ -8,7 +8,7 @@ import {
   ShieldCheck, LogOut, CheckCircle2, XCircle, Clock,
   Scissors, PawPrint, Loader2, RefreshCw,
   UserPlus, Users, X, ChevronDown, Mail, Phone, MapPin,
-  Calendar, Hash, FileText, Dog,
+  Calendar, Hash, FileText, Dog, CalendarDays, BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,23 @@ interface AdminUser {
   email: string;
   full_name: string | null;
   created_at: string;
+}
+
+interface VendorBooking {
+  id: string;
+  pet_name: string;
+  pet_type: string;
+  appointment_date?: string;
+  appointment_time?: string;
+  walk_date?: string;
+  walk_time?: string;
+  booking_type?: string;
+  status: string;
+  total_price?: number;
+  rejection_reason?: string | null;
+  created_at: string;
+  users?: { full_name: string | null; email: string } | null;
+  services?: { name: string } | null;
 }
 
 const STATUS_CHIP: Record<ApprovalStatus, { label: string; cls: string }> = {
@@ -166,9 +183,25 @@ export default function AdminDashboardClient({ adminEmail, initialData, initialA
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [addAdminOpen, setAddAdminOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [vendorBookings, setVendorBookings] = useState<Record<string, VendorBooking[]>>({});
+  const [loadingBookings, setLoadingBookings] = useState<Record<string, boolean>>({});
   const supabase = createClient();
   const router = useRouter();
   const { toast } = useToast();
+
+  async function loadVendorBookings(vendorId: string, vendorType: "grooming" | "walking") {
+    if (vendorBookings[vendorId] !== undefined) return;
+    setLoadingBookings((prev) => ({ ...prev, [vendorId]: true }));
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) return;
+    const res = await fetch(`/api/admin/bookings?vendor_id=${vendorId}&vendor_type=${vendorType}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const json = await res.json();
+    setVendorBookings((prev) => ({ ...prev, [vendorId]: json.bookings ?? [] }));
+    setLoadingBookings((prev) => ({ ...prev, [vendorId]: false }));
+  }
 
   function refresh() {
     startTransition(() => { router.refresh(); });
@@ -302,6 +335,7 @@ export default function AdminDashboardClient({ adminEmail, initialData, initialA
           </TabsList>
 
           {VENDOR_TABS.map(({ key, nameField }) => {
+            const vendorType: "grooming" | "walking" = key === "grooming_vendors" ? "grooming" : "walking";
             const rows = data[key].filter((r) =>
               filter === "all" ? true : r.approval_status === filter
             );
@@ -320,13 +354,19 @@ export default function AdminDashboardClient({ adminEmail, initialData, initialA
                       const isPendingRow = row.approval_status === "pending";
                       const isProcessing = processingId === row.id;
                       const isExpanded = expandedId === row.id;
+                      const bookings = vendorBookings[row.id];
+                      const isLoadingB = loadingBookings[row.id];
 
                       return (
                         <div key={row.id} className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
                           {/* Collapsed row — click to expand */}
                           <button
                             type="button"
-                            onClick={() => setExpandedId(isExpanded ? null : row.id)}
+                            onClick={() => {
+                              const next = isExpanded ? null : row.id;
+                              setExpandedId(next);
+                              if (next) loadVendorBookings(row.id, vendorType);
+                            }}
                             className="w-full p-4 flex items-center gap-3 text-left hover:bg-zinc-800/50 transition-colors"
                           >
                             <ChevronDown className={`h-4 w-4 text-zinc-500 shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
@@ -384,15 +424,79 @@ export default function AdminDashboardClient({ adminEmail, initialData, initialA
 
                           {/* Expanded detail panel */}
                           {isExpanded && (
-                            <div className="border-t border-zinc-800 px-4 py-4 bg-zinc-950 grid gap-2.5">
-                              <DetailRow icon={Mail}     label="Email"        value={row.email}        href={row.email ? `mailto:${row.email}` : undefined} />
-                              <DetailRow icon={Phone}    label="Phone"        value={row.phone}        href={row.phone ? `tel:${row.phone}` : undefined} />
-                              <DetailRow icon={MapPin}   label="Address"      value={[row.address, row.city].filter(Boolean).join(", ")} />
-                              <DetailRow icon={Dog}      label="Pet types"    value={row.pet_types} />
-                              <DetailRow icon={MapPin}   label="Service area" value={row.service_area} />
-                              <DetailRow icon={FileText} label="Description"  value={row.description ?? row.bio} />
-                              <DetailRow icon={Calendar} label="Registered"   value={formatDate(row.created_at)} />
-                              <DetailRow icon={Hash}     label="User ID"      value={row.user_id} />
+                            <div className="border-t border-zinc-800 px-4 py-4 bg-zinc-950 grid gap-4">
+                              {/* Vendor details */}
+                              <div className="grid gap-2.5">
+                                <DetailRow icon={Mail}     label="Email"        value={row.email}        href={row.email ? `mailto:${row.email}` : undefined} />
+                                <DetailRow icon={Phone}    label="Phone"        value={row.phone}        href={row.phone ? `tel:${row.phone}` : undefined} />
+                                <DetailRow icon={MapPin}   label="Address"      value={[row.address, row.city].filter(Boolean).join(", ")} />
+                                <DetailRow icon={Dog}      label="Pet types"    value={row.pet_types} />
+                                <DetailRow icon={MapPin}   label="Service area" value={row.service_area} />
+                                <DetailRow icon={FileText} label="Description"  value={row.description ?? row.bio} />
+                                <DetailRow icon={Calendar} label="Registered"   value={formatDate(row.created_at)} />
+                                <DetailRow icon={Hash}     label="User ID"      value={row.user_id} />
+                              </div>
+
+                              {/* Bookings section */}
+                              <div className="border-t border-zinc-800 pt-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <BookOpen className="h-4 w-4 text-zinc-400" />
+                                  <span className="text-sm font-semibold text-zinc-300">Bookings</span>
+                                  {bookings && (
+                                    <span className="rounded-full bg-zinc-700 text-zinc-300 text-xs px-2 py-0.5">{bookings.length}</span>
+                                  )}
+                                </div>
+                                {isLoadingB ? (
+                                  <div className="flex justify-center py-6">
+                                    <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
+                                  </div>
+                                ) : !bookings || bookings.length === 0 ? (
+                                  <p className="text-xs text-zinc-600 py-4 text-center">No bookings yet</p>
+                                ) : (
+                                  <div className="flex flex-col gap-2">
+                                    {bookings.map((b) => {
+                                      const dateStr = b.appointment_date ?? b.walk_date ?? "—";
+                                      const timeStr = b.appointment_time ?? b.walk_time ?? "";
+                                      const statusColors: Record<string, string> = {
+                                        pending: "text-amber-400", confirmed: "text-blue-400",
+                                        completed: "text-emerald-400", cancelled: "text-red-400",
+                                        in_progress: "text-violet-400",
+                                      };
+                                      return (
+                                        <div key={b.id} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 grid gap-1.5">
+                                          <div className="flex items-start justify-between gap-2 flex-wrap">
+                                            <div>
+                                              <p className="text-xs font-semibold text-zinc-200">
+                                                {b.users?.full_name ?? b.users?.email ?? "Customer"}
+                                              </p>
+                                              <p className="text-xs text-zinc-500">
+                                                {b.pet_name} ({b.pet_type}){b.services?.name ? ` · ${b.services.name}` : ""}
+                                              </p>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                              <p className={`text-xs font-semibold capitalize ${statusColors[b.status] ?? "text-zinc-400"}`}>
+                                                {b.status}
+                                              </p>
+                                              {b.total_price != null && (
+                                                <p className="text-xs text-zinc-500">₹{b.total_price}</p>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <p className="text-xs text-zinc-600 flex items-center gap-1">
+                                            <CalendarDays className="h-3 w-3" />
+                                            {formatDate(dateStr)}{timeStr ? ` at ${timeStr}` : ""}
+                                          </p>
+                                          {b.status === "cancelled" && b.rejection_reason && (
+                                            <p className="text-xs text-red-400 bg-red-500/10 rounded px-2 py-1">
+                                              <span className="font-semibold">Rejection reason: </span>{b.rejection_reason}
+                                            </p>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>

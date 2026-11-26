@@ -18,6 +18,7 @@ interface Booking {
   booking_type: string;
   status: BookingStatus;
   total_price: number;
+  rejection_reason: string | null;
   created_at: string;
   grooming_vendors?: { business_name: string } | null;
 }
@@ -103,6 +104,11 @@ export default function BookingsPage() {
                     <p className="text-xs text-muted-foreground">
                       {b.pet_name} · {b.pet_type}{b.pet_breed ? ` · ${b.pet_breed}` : ""}
                     </p>
+                    {b.status === "cancelled" && b.rejection_reason && (
+                      <p className="text-xs rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-2 mt-1">
+                        <span className="font-semibold">Reason: </span>{b.rejection_reason}
+                      </p>
+                    )}
                   </div>
                   <div className="text-sm font-bold text-primary shrink-0">
                     ₹{b.total_price}
