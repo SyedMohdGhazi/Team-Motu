@@ -160,6 +160,7 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
   const [category, setCategory] = useState("bath");
   const [includedServices, setIncludedServices] = useState<string[]>([]);
   const [otherDesc, setOtherDesc] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
@@ -175,7 +176,7 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
   function handleClose() {
     onClose();
     setName(""); setPrice(""); setDuration(""); setCategory("bath");
-    setIncludedServices([]); setOtherDesc("");
+    setIncludedServices([]); setOtherDesc(""); setImageUrl("");
   }
 
   async function handleAdd() {
@@ -188,6 +189,7 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
       description: buildDescription(),
       pet_type: petType as "dog" | "cat" | "both",
       service_type: serviceType as "home" | "clinic" | "both",
+      image_url: imageUrl || null,
     });
     setLoading(false);
     if (error) {
@@ -247,6 +249,22 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
               </div>
             )}
           </div>
+          <div className="grid gap-1.5">
+            <Label>Service image URL <span className="text-xs text-muted-foreground">(optional)</span></Label>
+            <Input
+              placeholder="https://example.com/service-photo.jpg"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+            />
+            {imageUrl && (
+              <img
+                src={imageUrl}
+                alt="Preview"
+                className="mt-1 h-20 w-full rounded-lg object-cover border"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
               <Label>Price (₹)</Label>
@@ -293,7 +311,7 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
   );
 }
 
-interface ServiceRow { id: string; name: string; price: number; duration_minutes: number; pet_type: string; service_type: string; category: string; description: string | null; }
+interface ServiceRow { id: string; name: string; price: number; duration_minutes: number; pet_type: string; service_type: string; category: string; description: string | null; image_url: string | null; }
 
 const FULL_PACKAGE_OPTIONS = ["Bath", "Haircut", "Nail Trim", "Ear Cleaning"] as const;
 function formatCategory(c: string) { return c.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()); }
@@ -311,6 +329,7 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
   const [includedServices, setIncludedServices] = useState<string[]>([]);
   const [otherDesc, setOtherDesc] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [imageUrl, setImageUrl] = useState(service?.image_url ?? "");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const supabase = createClient();
@@ -333,6 +352,7 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
       } else {
         setOtherDesc("");
       }
+      setImageUrl(service.image_url ?? "");
     }
   }, [service]);
 
@@ -354,6 +374,7 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
       name, price: parseFloat(price), duration_minutes: parseInt(duration), category,
       description: buildDescription(),
       pet_type: petType as "dog"|"cat"|"both", service_type: serviceType as "home"|"clinic"|"both",
+      image_url: imageUrl || null,
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from("services") as any).update(updated).eq("id", service.id);
@@ -435,6 +456,22 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
                   {otherWordCount}/20 words
                 </p>
               </div>
+            )}
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Service image URL <span className="text-xs text-muted-foreground">(optional)</span></Label>
+            <Input
+              placeholder="https://example.com/service-photo.jpg"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+            />
+            {imageUrl && (
+              <img
+                src={imageUrl}
+                alt="Preview"
+                className="mt-1 h-20 w-full rounded-lg object-cover border"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -622,19 +659,32 @@ export default function VendorDashboardPage() {
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = vendorId
+    let saveError: { message: string } | null = null;
+    let newVendorId: string | null = null;
+
+    if (vendorId) {
       // Update: never touch is_active or approval_status — admin controls those
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ? await (supabase.from("grooming_vendors") as any).update(basePayload).eq("id", vendorId).select().single()
+      const { error } = await (supabase.from("grooming_vendors") as any)
+        .update(basePayload)
+        .eq("id", vendorId);
+      saveError = error;
+    } else {
       // New listing: start inactive, pending admin approval
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      : await (supabase.from("grooming_vendors") as any).insert({ ...basePayload, is_active: false, approval_status: "pending" }).select().single();
+      const { data, error } = await (supabase.from("grooming_vendors") as any)
+        .insert({ ...basePayload, is_active: false, approval_status: "pending" })
+        .select("id")
+        .single();
+      saveError = error;
+      if (!error) newVendorId = data.id;
+    }
 
     setSavingProfile(false);
-    if (error) {
-      toast({ title: "Failed to save", description: error.message, variant: "destructive" });
+    if (saveError) {
+      toast({ title: "Failed to save", description: saveError.message, variant: "destructive" });
     } else {
-      if (!vendorId) setVendorId(data.id);
+      if (newVendorId) setVendorId(newVendorId);
       toast({ title: vendorId ? "Profile updated!" : "Business registered!", description: vendorId ? "Your changes have been saved." : "Your listing is under review and will go live once approved." });
       // Also update user role to vendor
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
