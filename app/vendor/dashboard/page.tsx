@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   CheckCircle2, XCircle, Clock, TrendingUp, Star, Home, Building2,
-  Plus, Pencil, MapPin, IndianRupee, Percent, Loader2, Save, Trash2, Link,
+  Plus, Pencil, MapPin, IndianRupee, Percent, Loader2, Save, Trash2, Link, Upload,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -149,6 +149,65 @@ const STATUS_STYLES: Record<BookingStatus, string> = {
   cancelled: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
 };
 
+function ImageUploadField({ value, onChange, label = "Photo" }: {
+  value: string; onChange: (url: string) => void; label?: string;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const { toast } = useToast();
+  const supabase = createClient();
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from("vendor-images")
+      .upload(path, file, { upsert: true });
+    if (uploadError) {
+      toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" });
+    } else {
+      const { data: { publicUrl } } = supabase.storage.from("vendor-images").getPublicUrl(path);
+      onChange(publicUrl);
+    }
+    setUploading(false);
+    e.target.value = "";
+  }
+
+  return (
+    <div className="grid gap-1.5">
+      <Label>{label} <span className="text-xs text-muted-foreground">(optional)</span></Label>
+      <div
+        onClick={() => !uploading && ref.current?.click()}
+        className={`relative flex h-28 w-full cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-colors overflow-hidden
+          ${value ? "border-muted" : "border-muted-foreground/25 hover:border-primary/50"}`}
+      >
+        {value ? (
+          <>
+            <img src={value} alt="Preview" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity">
+              <span className="text-white text-xs font-semibold">Change photo</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <Upload className="h-6 w-6" />
+            <span className="text-xs">Click to upload</span>
+          </div>
+        )}
+        {uploading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        )}
+      </div>
+      <input ref={ref} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+    </div>
+  );
+}
+
 function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
   vendorId: string; open: boolean; onClose: () => void; onAdded: () => void;
 }) {
@@ -249,22 +308,7 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
               </div>
             )}
           </div>
-          <div className="grid gap-1.5">
-            <Label>Service image URL <span className="text-xs text-muted-foreground">(optional)</span></Label>
-            <Input
-              placeholder="https://example.com/service-photo.jpg"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
-            {imageUrl && (
-              <img
-                src={imageUrl}
-                alt="Preview"
-                className="mt-1 h-20 w-full rounded-lg object-cover border"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-              />
-            )}
-          </div>
+          <ImageUploadField value={imageUrl} onChange={setImageUrl} label="Service photo" />
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
               <Label>Price (₹)</Label>
@@ -458,22 +502,7 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
               </div>
             )}
           </div>
-          <div className="grid gap-1.5">
-            <Label>Service image URL <span className="text-xs text-muted-foreground">(optional)</span></Label>
-            <Input
-              placeholder="https://example.com/service-photo.jpg"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
-            {imageUrl && (
-              <img
-                src={imageUrl}
-                alt="Preview"
-                className="mt-1 h-20 w-full rounded-lg object-cover border"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-              />
-            )}
-          </div>
+          <ImageUploadField value={imageUrl} onChange={setImageUrl} label="Service photo" />
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
               <Label>Price (₹)</Label>
@@ -996,23 +1025,11 @@ export default function VendorDashboardPage() {
                     <Label>Description</Label>
                     <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none" placeholder="Tell customers about your experience and services…" value={profile.description} onChange={(e) => setProfile((p) => ({ ...p, description: e.target.value }))} />
                   </div>
-                  <div className="grid gap-1.5">
-                    <Label>Business photo URL <span className="text-xs text-muted-foreground">(optional)</span></Label>
-                    <Input
-                      placeholder="https://example.com/your-shop-photo.jpg"
-                      value={profile.image_url}
-                      onChange={(e) => setProfile((p) => ({ ...p, image_url: e.target.value }))}
-                    />
-                    {profile.image_url && (
-                      <img
-                        src={profile.image_url}
-                        alt="Business preview"
-                        className="mt-1 h-28 w-full rounded-lg object-cover border"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                      />
-                    )}
-                    <p className="text-xs text-muted-foreground">Paste a link to your shop photo. Customers will see this on your profile.</p>
-                  </div>
+                  <ImageUploadField
+                    value={profile.image_url}
+                    onChange={(url) => setProfile((p) => ({ ...p, image_url: url }))}
+                    label="Business photo"
+                  />
                   <div className="grid grid-cols-2 gap-3">
                     <div className="grid gap-1.5">
                       <Label>Phone</Label>
