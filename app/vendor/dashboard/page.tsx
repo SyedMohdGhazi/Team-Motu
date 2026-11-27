@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   CheckCircle2, XCircle, Clock, TrendingUp, Star, Home, Building2,
-  Plus, Pencil, MapPin, IndianRupee, Percent, Loader2, Save, Trash2, Link, Upload,
+  Plus, Pencil, MapPin, IndianRupee, Percent, Loader2, Save, Trash2, Link, Upload, Bell,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -583,6 +583,9 @@ export default function VendorDashboardPage() {
   const [approvalStatus, setApprovalStatus] = useState<"pending" | "approved" | "rejected" | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [syncTargetType, setSyncTargetType] = useState("");
+  const [syncAffectedCount, setSyncAffectedCount] = useState(0);
   const [addServiceOpen, setAddServiceOpen] = useState(false);
   const [editingService, setEditingService] = useState<ServiceRow | null>(null);
   const [rejectBookingId, setRejectBookingId] = useState<string | null>(null);
@@ -668,10 +671,47 @@ export default function VendorDashboardPage() {
     loadData();
   }, []);
 
-  async function saveProfile() {
+  // Realtime: toast when a new booking arrives while vendor is on this page
+  useEffect(() => {
+    if (!vendorId) return;
+    const channel = supabase
+      .channel(`vendor-bookings-${vendorId}`)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .on("postgres_changes" as any, {
+        event: "INSERT",
+        schema: "public",
+        table: "bookings",
+        filter: `vendor_id=eq.${vendorId}`,
+      }, (payload: { new: Booking }) => {
+        setBookings((prev) => [payload.new, ...prev]);
+        toast({
+          title: "New booking request!",
+          description: `${payload.new.pet_name} (${payload.new.pet_type}) wants a grooming appointment.`,
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [vendorId]);
+
+  async function saveProfile(skipSyncCheck = false) {
     setSavingProfile(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSavingProfile(false); return; }
+
+    // Warn vendor if the service type change will affect existing services
+    if (vendorId && !skipSyncCheck) {
+      const newSyncType = profile.offers_home_service && profile.offers_clinic_visit
+        ? "both"
+        : profile.offers_home_service ? "home" : "clinic";
+      const affected = services.filter((s) => s.service_type !== newSyncType);
+      if (affected.length > 0) {
+        setSyncTargetType(newSyncType);
+        setSyncAffectedCount(affected.length);
+        setSyncDialogOpen(true);
+        setSavingProfile(false);
+        return;
+      }
+    }
 
     const { lat, lng } = profile.maps_url ? parseMapsUrl(profile.maps_url) : { lat: null, lng: null };
     const basePayload: Record<string, unknown> = {
@@ -721,6 +761,24 @@ export default function VendorDashboardPage() {
       // Also update user role to vendor
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase.from("users") as any).update({ role: "vendor" }).eq("id", user.id);
+
+      // Sync service_type on all active services to match the vendor's offering
+      const activeVendorId = vendorId ?? newVendorId;
+      if (activeVendorId) {
+        const syncType = profile.offers_home_service && profile.offers_clinic_visit
+          ? "both"
+          : profile.offers_home_service ? "home" : "clinic";
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.from("services") as any)
+          .update({ service_type: syncType })
+          .eq("vendor_id", activeVendorId)
+          .eq("is_active", true);
+        // Refresh services list in state
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: refreshed } = await (supabase.from("services") as any)
+          .select("*").eq("vendor_id", activeVendorId).eq("is_active", true);
+        setServices(refreshed ?? []);
+      }
     }
   }
 
@@ -803,6 +861,19 @@ export default function VendorDashboardPage() {
           <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm flex items-center gap-3 text-emerald-700 dark:text-emerald-300">
             <CheckCircle2 className="h-5 w-5 shrink-0" />
             <p className="font-semibold">Your listing is live and visible to customers</p>
+          </div>
+        )}
+
+        {/* Pending bookings notification */}
+        {approvalStatus === "approved" && pendingCount > 0 && (
+          <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm flex items-center gap-3 text-amber-700 dark:text-amber-300 animate-in slide-in-from-top-2 duration-300">
+            <Bell className="h-5 w-5 shrink-0 animate-bounce" />
+            <div>
+              <p className="font-semibold">
+                {pendingCount === 1 ? "1 new booking request" : `${pendingCount} new booking requests`} waiting
+              </p>
+              <p className="text-xs opacity-80 mt-0.5">Go to the Bookings tab to accept or reject</p>
+            </div>
           </div>
         )}
         <div className="mb-6 flex items-start justify-between gap-4">
@@ -1098,7 +1169,7 @@ export default function VendorDashboardPage() {
                 </Card>
               )}
 
-              <Button onClick={saveProfile} disabled={savingProfile || !profile.business_name} className="w-full sm:w-fit">
+              <Button onClick={() => saveProfile()} disabled={savingProfile || !profile.business_name} className="w-full sm:w-fit">
                 {savingProfile ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                 {vendorId ? "Save changes" : "Register my business"}
               </Button>
@@ -1133,6 +1204,30 @@ export default function VendorDashboardPage() {
           setRejectBookingId(null);
         }}
       />
+
+      {/* Service type sync confirmation */}
+      <Dialog open={syncDialogOpen} onOpenChange={(open) => !open && setSyncDialogOpen(false)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Update service types?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {syncAffectedCount === 1
+              ? "1 service is currently set to a different visit type."
+              : `${syncAffectedCount} services are set to different visit types.`}
+            {" "}Saving will switch {syncAffectedCount === 1 ? "it" : "all of them"} to{" "}
+            <strong className="text-foreground">
+              {syncTargetType === "home" ? "Home only" : syncTargetType === "clinic" ? "Clinic only" : "Home & Clinic (Both)"}
+            </strong>.
+          </p>
+          <DialogFooter className="gap-2 mt-2">
+            <Button variant="outline" onClick={() => setSyncDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => { setSyncDialogOpen(false); saveProfile(true); }}>
+              Yes, update all services
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

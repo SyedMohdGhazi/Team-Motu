@@ -51,7 +51,13 @@ export default function BookingsPage() {
         .select("*, grooming_vendors(business_name)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      setBookings(data ?? []);
+      const list = (data ?? []) as Booking[];
+      setBookings(list);
+      // Mark confirmed/cancelled bookings as seen so dashboard notification clears
+      const seenIds = list
+        .filter((b) => b.status === "confirmed" || b.status === "cancelled")
+        .map((b) => b.id);
+      localStorage.setItem("tm-seen-booking-ids", JSON.stringify(seenIds));
       setLoading(false);
     }
     load();

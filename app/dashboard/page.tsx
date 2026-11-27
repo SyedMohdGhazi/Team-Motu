@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Scissors, PawPrint, CalendarDays, ArrowRight, Plus, BookOpen, LifeBuoy } from "lucide-react";
+import { Scissors, PawPrint, CalendarDays, ArrowRight, Plus, BookOpen, LifeBuoy, Bell, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface UserPet {
@@ -23,6 +23,8 @@ export default function DashboardPage() {
   const [pets, setPets] = useState<UserPet[]>([]);
   const [activePetId, setActivePetId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [unseenCount, setUnseenCount] = useState(0);
+  const [notifDismissed, setNotifDismissed] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -43,6 +45,18 @@ export default function DashboardPage() {
       const petList = (petData as UserPet[]) ?? [];
       setPets(petList);
       if (petList.length > 0) setActivePetId(petList[0].id);
+
+      // Check for unseen booking status updates
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: updatedBookings } = await (supabase.from("bookings") as any)
+        .select("id")
+        .eq("user_id", user.id)
+        .in("status", ["confirmed", "cancelled"]);
+      const currentIds: string[] = (updatedBookings ?? []).map((b: { id: string }) => b.id);
+      const seenIds: string[] = JSON.parse(localStorage.getItem("tm-seen-booking-ids") || "[]");
+      const unseen = currentIds.filter((id) => !seenIds.includes(id));
+      setUnseenCount(unseen.length);
+
       setLoading(false);
     }
     load();
@@ -86,6 +100,33 @@ export default function DashboardPage() {
     <>
       <Navbar />
       <main className="container mx-auto max-w-3xl px-4 py-8">
+
+        {/* Booking update notification */}
+        {unseenCount > 0 && !notifDismissed && (
+          <div className="mb-6 rounded-xl border border-primary/30 bg-primary/8 p-4 flex items-start gap-3 animate-in slide-in-from-top-2 duration-300">
+            <Bell className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm">
+                {unseenCount === 1 ? "1 booking update" : `${unseenCount} booking updates`}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                A vendor has responded to your booking request.
+              </p>
+              <Link
+                href="/dashboard/bookings"
+                className="text-xs text-primary font-semibold mt-2 inline-block hover:underline"
+              >
+                View My Bookings →
+              </Link>
+            </div>
+            <button
+              onClick={() => setNotifDismissed(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Greeting */}
         <div className="mb-6">
