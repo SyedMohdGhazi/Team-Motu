@@ -673,7 +673,7 @@ export default function VendorDashboardPage() {
     if (!user) { setSavingProfile(false); return; }
 
     const { lat, lng } = profile.maps_url ? parseMapsUrl(profile.maps_url) : { lat: null, lng: null };
-    const basePayload = {
+    const basePayload: Record<string, unknown> = {
       user_id: user.id,
       business_name: profile.business_name,
       description: profile.description || null,
@@ -682,12 +682,12 @@ export default function VendorDashboardPage() {
       phone: profile.phone || null,
       email: profile.email || null,
       maps_url: profile.maps_url || null,
-      image_url: profile.image_url || null,
       latitude: lat,
       longitude: lng,
       offers_home_service: profile.offers_home_service,
       offers_clinic_visit: profile.offers_clinic_visit,
     };
+    if (profile.image_url) basePayload.image_url = profile.image_url;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let saveError: { message: string } | null = null;
