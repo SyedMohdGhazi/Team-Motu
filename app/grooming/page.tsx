@@ -34,11 +34,11 @@ function VendorCard({ vendor, isOwnVendor }: { vendor: Vendor; isOwnVendor: bool
   return (
     <Link href={href} className="block group">
       <Card className="overflow-hidden hover:shadow-md transition-all duration-200 group-hover:-translate-y-0.5 cursor-pointer">
-        <div className="h-32 overflow-hidden">
+        <div className="aspect-video overflow-hidden bg-muted/40 flex items-center justify-center">
           <img
             src={vendor.image_url || "/images/vendor_default.svg"}
             alt={vendor.business_name}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
           />
         </div>
         <CardHeader className="pb-2">

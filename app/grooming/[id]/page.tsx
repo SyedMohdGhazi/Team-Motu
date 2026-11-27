@@ -492,11 +492,11 @@ export default function VendorDetailPage() {
 
         {/* Vendor header */}
         <div className="rounded-2xl border bg-card overflow-hidden mb-6">
-          <div className="h-40 overflow-hidden">
+          <div className="aspect-video overflow-hidden bg-muted/40 flex items-center justify-center">
             <img
               src={vendor.image_url || "/images/vendor_default.svg"}
               alt={vendor.business_name}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
             />
           </div>
           <div className="p-5 grid gap-3">
@@ -580,11 +580,11 @@ export default function VendorDetailPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {services.map((s) => (
               <div key={s.id} className="rounded-xl border bg-card overflow-hidden hover:shadow-sm transition-shadow">
-                <div className="h-28 overflow-hidden">
+              <div className="aspect-video overflow-hidden bg-muted/40 flex items-center justify-center">
                   <img
                     src={s.image_url || SERVICE_IMAGE[s.category] || "/images/services/other.svg"}
                     alt={s.name}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain"
                   />
                 </div>
                 <div className="p-4 grid gap-2">
