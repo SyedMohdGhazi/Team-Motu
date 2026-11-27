@@ -51,7 +51,7 @@ function VendorCard({ vendor, isOwnVendor }: { vendor: Vendor; isOwnVendor: bool
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-              <span className="text-sm font-semibold">{vendor.rating.toFixed(1)}</span>
+              <span className="text-sm font-semibold">{(vendor.rating ?? 0).toFixed(1)}</span>
               <span className="text-xs text-muted-foreground">({vendor.total_reviews})</span>
             </div>
           </div>
@@ -108,8 +108,8 @@ export default function GroomingPage() {
       setLoading(true);
       const [{ data: { user } }, { data }] = await Promise.all([
         supabase.auth.getUser(),
-        supabase
-          .from("grooming_vendors")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase.from("grooming_vendors") as any)
           .select("*, services(id, price, pet_type, service_type)")
           .eq("is_active", true)
           .order("rating", { ascending: false }),

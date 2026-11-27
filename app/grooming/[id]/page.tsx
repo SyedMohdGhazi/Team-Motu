@@ -426,7 +426,7 @@ export default function VendorDetailPage() {
           .single(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase.from("services") as any)
-          .select("id, name, price, duration_minutes, category, pet_type, service_type, description")
+          .select("*")
           .eq("vendor_id", id)
           .eq("is_active", true)
           .order("price", { ascending: true }),
@@ -511,7 +511,7 @@ export default function VendorDetailPage() {
               </div>
               <div className="flex items-center gap-1 shrink-0 bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-1.5">
                 <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                <span className="font-bold text-sm">{vendor.rating.toFixed(1)}</span>
+                <span className="font-bold text-sm">{(vendor.rating ?? 0).toFixed(1)}</span>
                 <span className="text-xs text-muted-foreground">({vendor.total_reviews})</span>
               </div>
             </div>

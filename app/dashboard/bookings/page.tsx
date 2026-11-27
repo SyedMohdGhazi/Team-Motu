@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { createClient } from "@/lib/supabase/client";
@@ -39,11 +40,12 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
+  const router = useRouter();
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) { router.push("/login"); return; }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase.from("bookings") as any)
         .select("*, grooming_vendors(business_name)")

@@ -28,7 +28,7 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) { setLoading(false); return; }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: profile } = await (supabase.from("users") as any)
