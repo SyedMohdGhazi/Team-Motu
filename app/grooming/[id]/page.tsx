@@ -406,8 +406,10 @@ export default function VendorDetailPage() {
   const [savedPets, setSavedPets] = useState<UserPet[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userPhone, setUserPhone] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [phoneGateOpen, setPhoneGateOpen] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -440,7 +442,7 @@ export default function VendorDetailPage() {
       if (user) {
         const [{ data: profile }, { data: pets }] = await Promise.all([
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (supabase.from("users") as any).select("role").eq("id", user.id).single(),
+          (supabase.from("users") as any).select("role, phone").eq("id", user.id).single(),
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (supabase.from("user_pets") as any)
             .select("id, name, type, breed, age_years")
@@ -448,6 +450,7 @@ export default function VendorDetailPage() {
             .order("created_at", { ascending: true }),
         ]);
         setUserRole(profile?.role ?? null);
+        setUserPhone(profile?.phone ?? "");
         setSavedPets(pets ?? []);
       }
 
@@ -557,7 +560,13 @@ export default function VendorDetailPage() {
               </div>
             ) : (
               <Button
-                onClick={() => setBookingOpen(true)}
+                onClick={() => {
+                  if (currentUserId && userPhone === "") {
+                    setPhoneGateOpen(true);
+                  } else {
+                    setBookingOpen(true);
+                  }
+                }}
                 disabled={services.length === 0}
                 className="w-full"
                 size="lg"
@@ -624,6 +633,24 @@ export default function VendorDetailPage() {
           onClose={() => setBookingOpen(false)}
         />
       )}
+
+      {/* Phone number required gate */}
+      <Dialog open={phoneGateOpen} onOpenChange={setPhoneGateOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Phone number required</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Please add your phone number to your profile before booking. Vendors need a way to contact you after your appointment is accepted.
+          </p>
+          <DialogFooter className="gap-2 mt-2">
+            <Button variant="outline" onClick={() => setPhoneGateOpen(false)}>Cancel</Button>
+            <Button asChild>
+              <Link href="/dashboard/profile">Update my profile →</Link>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowLeft, Loader2, CalendarDays, Clock, PawPrint } from "lucide-react";
+import { ArrowLeft, Loader2, CalendarDays, Clock, PawPrint, Phone, MessageCircle } from "lucide-react";
 
 type BookingStatus = "pending" | "confirmed" | "in_progress" | "completed" | "cancelled";
 
@@ -21,7 +21,7 @@ interface Booking {
   total_price: number;
   rejection_reason: string | null;
   created_at: string;
-  grooming_vendors?: { business_name: string } | null;
+  grooming_vendors?: { business_name: string; phone: string | null; is_whatsapp: boolean } | null;
 }
 
 const STATUS: Record<BookingStatus, { label: string; className: string }> = {
@@ -36,6 +36,12 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function whatsappUrl(phone: string, message: string): string {
+  const digits = phone.replace(/\D/g, "");
+  const number = digits.length === 10 ? `91${digits}` : digits;
+  return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+}
+
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +54,7 @@ export default function BookingsPage() {
       if (!user) { router.push("/login"); return; }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase.from("bookings") as any)
-        .select("*, grooming_vendors(business_name)")
+        .select("*, grooming_vendors(business_name, phone, is_whatsapp)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       const list = (data ?? []) as Booking[];
@@ -116,6 +122,24 @@ export default function BookingsPage() {
                       <p className="text-xs rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-2 mt-1">
                         <span className="font-semibold">Reason: </span>{b.rejection_reason}
                       </p>
+                    )}
+                    {(b.status === "confirmed" || b.status === "in_progress" || b.status === "completed") && b.grooming_vendors?.phone && (
+                      <div className="mt-1 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800 px-3 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+                        <span className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                          <Phone className="h-4 w-4 shrink-0" />
+                          {b.grooming_vendors.phone}
+                        </span>
+                        {b.grooming_vendors.is_whatsapp && (
+                          <a
+                            href={whatsappUrl(b.grooming_vendors.phone, `Hi, I have a booking for ${b.pet_name} on ${formatDate(b.appointment_date)} at ${b.appointment_time}`)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0"
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" /> Message on WhatsApp
+                          </a>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="text-sm font-bold text-primary shrink-0">

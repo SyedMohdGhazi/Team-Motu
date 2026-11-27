@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   CheckCircle2, XCircle, Clock, TrendingUp, Star, Home, Building2,
-  Plus, Pencil, MapPin, IndianRupee, Percent, Loader2, Save, Trash2, Link, Upload, Bell,
+  Plus, Pencil, MapPin, IndianRupee, Percent, Loader2, Save, Trash2, Link, Upload, Bell, Phone, MessageCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -96,7 +96,7 @@ interface Booking {
   total_price: number;
   notes: string | null;
   rejection_reason: string | null;
-  users?: { full_name: string | null; email: string };
+  users?: { full_name: string | null; email: string; phone: string | null; is_whatsapp: boolean };
   services?: { name: string };
 }
 
@@ -127,6 +127,7 @@ interface VendorProfile {
   email: string;
   maps_url: string;
   image_url: string;
+  is_whatsapp: boolean;
   offers_home_service: boolean;
   offers_clinic_visit: boolean;
 }
@@ -361,6 +362,11 @@ interface ServiceRow { id: string; name: string; price: number; duration_minutes
 
 const FULL_PACKAGE_OPTIONS = ["Bath", "Haircut", "Nail Trim", "Ear Cleaning"] as const;
 function formatCategory(c: string) { return c.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()); }
+function whatsappUrl(phone: string, message: string): string {
+  const digits = phone.replace(/\D/g, "");
+  const number = digits.length === 10 ? `91${digits}` : digits;
+  return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+}
 
 function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
   service: ServiceRow | null; open: boolean; onClose: () => void;
@@ -576,7 +582,7 @@ export default function VendorDashboardPage() {
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [profile, setProfile] = useState<VendorProfile>({
     business_name: "", description: "", address: "", city: "Dehradun",
-    phone: "", email: "", maps_url: "", image_url: "",
+    phone: "", email: "", maps_url: "", image_url: "", is_whatsapp: false,
     offers_home_service: true, offers_clinic_visit: true,
   });
   const [vendorId, setVendorId] = useState<string | null>(null);
@@ -630,6 +636,7 @@ export default function VendorDashboardPage() {
           email: vendor.email ?? "",
           maps_url: vendor.maps_url ?? "",
           image_url: vendor.image_url ?? "",
+          is_whatsapp: vendor.is_whatsapp ?? false,
           offers_home_service: vendor.offers_home_service,
           offers_clinic_visit: vendor.offers_clinic_visit,
         });
@@ -637,7 +644,7 @@ export default function VendorDashboardPage() {
         // Load bookings and services
         const [{ data: bookingData }, { data: serviceData }] = await Promise.all([
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (supabase.from("bookings") as any).select("*, users(full_name, email), services(name)").eq("vendor_id", vendor.id).order("appointment_date", { ascending: false }),
+          (supabase.from("bookings") as any).select("*, users(full_name, email, phone, is_whatsapp), services(name)").eq("vendor_id", vendor.id).order("appointment_date", { ascending: false }),
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (supabase.from("services") as any).select("*").eq("vendor_id", vendor.id).eq("is_active", true),
         ]);
@@ -725,6 +732,7 @@ export default function VendorDashboardPage() {
       maps_url: profile.maps_url || null,
       latitude: lat,
       longitude: lng,
+      is_whatsapp: profile.is_whatsapp,
       offers_home_service: profile.offers_home_service,
       offers_clinic_visit: profile.offers_clinic_visit,
     };
@@ -980,6 +988,24 @@ export default function VendorDashboardPage() {
                         <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Mark completed
                       </Button>
                     )}
+                    {(b.status === "confirmed" || b.status === "in_progress" || b.status === "completed") && b.users?.phone && (
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800 px-3 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+                        <span className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                          <Phone className="h-4 w-4 shrink-0" />
+                          {b.users.phone}
+                        </span>
+                        {b.users.is_whatsapp && (
+                          <a
+                            href={whatsappUrl(b.users.phone, `Hi ${b.users.full_name ?? "there"}, your booking for ${b.pet_name} is confirmed for ${b.appointment_date} at ${b.appointment_time}.`)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0"
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" /> Message on WhatsApp
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -990,10 +1016,21 @@ export default function VendorDashboardPage() {
           <TabsContent value="services">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-semibold">Your Services</h2>
-              <Button size="sm" onClick={() => setAddServiceOpen(true)} disabled={!vendorId}>
+              <Button size="sm" onClick={() => {
+                if (!profile.phone) {
+                  toast({ title: "Phone number required", description: "Add a phone number in your Business Profile before adding services.", variant: "destructive" });
+                  return;
+                }
+                setAddServiceOpen(true);
+              }} disabled={!vendorId}>
                 <Plus className="h-4 w-4 mr-1" /> Add service
               </Button>
             </div>
+            {vendorId && !profile.phone && services.length > 0 && (
+              <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+                <strong>Action needed:</strong> Add a phone number to your Business Profile. Customers need a contact number before they can book your services.
+              </div>
+            )}
             {!vendorId ? (
               <p className="py-8 text-center text-muted-foreground text-sm">Save your business profile first to add services.</p>
             ) : services.length === 0 ? (
@@ -1106,7 +1143,7 @@ export default function VendorDashboardPage() {
                   />
                   <div className="grid grid-cols-2 gap-3">
                     <div className="grid gap-1.5">
-                      <Label>Phone</Label>
+                      <Label>Phone <span className="text-xs text-destructive font-normal">* required</span></Label>
                       <Input placeholder="+91-XXXXX-XXXXX" value={profile.phone} onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))} />
                     </div>
                     <div className="grid gap-1.5">
@@ -1123,6 +1160,20 @@ export default function VendorDashboardPage() {
                       )}
                     </div>
                   </div>
+                  <label className="flex items-start gap-3 cursor-pointer rounded-xl border px-4 py-3 hover:bg-accent transition-colors">
+                    <input
+                      type="checkbox"
+                      className="accent-primary h-4 w-4 mt-0.5 shrink-0"
+                      checked={profile.is_whatsapp}
+                      onChange={(e) => setProfile((p) => ({ ...p, is_whatsapp: e.target.checked }))}
+                    />
+                    <div>
+                      <p className="text-sm font-medium">This number is on WhatsApp</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Customers can message you on WhatsApp after a booking is accepted.
+                      </p>
+                    </div>
+                  </label>
                   <div className="grid gap-1.5">
                     <Label>Address</Label>
                     <Input placeholder="Near ISBT, Dehradun" value={profile.address} onChange={(e) => setProfile((p) => ({ ...p, address: e.target.value }))} />
