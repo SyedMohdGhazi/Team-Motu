@@ -241,15 +241,16 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
   async function handleAdd() {
     if (!name || !price || !duration) return;
     setLoading(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from("services") as any).insert({
+    const payload: Record<string, unknown> = {
       vendor_id: vendorId, name, price: parseFloat(price),
       duration_minutes: parseInt(duration), category,
       description: buildDescription(),
       pet_type: petType as "dog" | "cat" | "both",
       service_type: serviceType as "home" | "clinic" | "both",
-      image_url: imageUrl || null,
-    });
+    };
+    if (imageUrl) payload.image_url = imageUrl;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("services") as any).insert(payload);
     setLoading(false);
     if (error) {
       toast({ title: "Failed to add service", description: error.message, variant: "destructive" });
@@ -261,9 +262,9 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>Add Service</DialogTitle></DialogHeader>
-        <div className="grid gap-4 py-2">
+      <DialogContent className="sm:max-w-md flex flex-col max-h-[90dvh]">
+        <DialogHeader className="shrink-0"><DialogTitle>Add Service</DialogTitle></DialogHeader>
+        <div className="grid gap-4 py-2 overflow-y-auto pr-1">
           <div className="grid gap-1.5">
             <Label>Service name</Label>
             <Input placeholder="e.g. Full Grooming Package" value={name} onChange={(e) => setName(e.target.value)} />
@@ -344,7 +345,7 @@ function AddServiceDialog({ vendorId, open, onClose, onAdded }: {
             </div>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button variant="outline" onClick={handleClose}>Cancel</Button>
           <Button onClick={handleAdd} disabled={loading || !name || !price || !duration || (category === "other" && otherWordCount > 20)}>
             {loading && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Add service
@@ -414,12 +415,13 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
   async function handleSave() {
     if (!service || !name || !price || !duration) return;
     setLoading(true);
-    const updated = {
+    const updated: Record<string, unknown> = {
       name, price: parseFloat(price), duration_minutes: parseInt(duration), category,
       description: buildDescription(),
       pet_type: petType as "dog"|"cat"|"both", service_type: serviceType as "home"|"clinic"|"both",
-      image_url: imageUrl || null,
     };
+    if (imageUrl) updated.image_url = imageUrl;
+    else if (service.image_url && !imageUrl) updated.image_url = null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from("services") as any).update(updated).eq("id", service.id);
     setLoading(false);
@@ -427,7 +429,7 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
       toast({ title: "Failed to update", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Service updated!" });
-      onEdited({ ...service, ...updated });
+      onEdited({ ...service, ...updated } as typeof service);
       handleClose();
     }
   }
@@ -455,9 +457,9 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>Edit Service</DialogTitle></DialogHeader>
-        <div className="grid gap-4 py-2">
+      <DialogContent className="sm:max-w-md flex flex-col max-h-[90dvh]">
+        <DialogHeader className="shrink-0"><DialogTitle>Edit Service</DialogTitle></DialogHeader>
+        <div className="grid gap-4 py-2 overflow-y-auto pr-1">
           <div className="grid gap-1.5">
             <Label>Service name</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -550,7 +552,7 @@ function EditServiceDialog({ service, open, onClose, onEdited, onDeleted }: {
             </div>
           )}
         </div>
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex-col sm:flex-row gap-2 shrink-0">
           {!confirmDelete && (
             <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)} disabled={loading} className="sm:mr-auto">
               <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete service
